@@ -1,0 +1,96 @@
+datasets:
+  data_e:
+    files:
+      - /store/data/Run2018D/EGamma/MINIAOD/22Jan2019-v2/110000/2FD9167C-A197-E749-908D-3809F7B83A23.root
+    test_events: [1379040063, 1342706563, 166666955, 165250764, 1384106641]
+    groups:
+      CERN: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/data_e.root
+      CERN2: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/data_e.root
+      CERN3:
+        path: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/data_e.root
+        translation: example
+
+  data_mu:
+    files:
+      - /store/data/Run2018D/SingleMuon/MINIAOD/22Jan2019-v2/110000/0011A0F3-23A3-D444-AD4D-2A2FFAE23796.root
+    test_events: [261258553, 162739046, 368407055, 544498301, 578332126]
+    groups:
+      CERN: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/data_mu.root
+
+  data_tau:
+    files:
+      - /store/data/Run2018D/Tau/MINIAOD/PromptReco-v2/000/320/673/00000/3ACE6677-E797-E811-B689-FA163E0FDAE6.root
+    test_events: [709351329, 755877979, 1080920610, 1533605828, 1869609222]
+    groups:
+      CERN: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/data_tau.root
+
+  mc_hh_vbf:
+    files:
+      - /store/mc/RunIIAutumn18MiniAOD/VBFHHTo2B2Tau_CV_1_C2V_1_C3_1_TuneCP5_PSWeights_13TeV-madgraph-pythia8/MINIAODSIM/102X_upgrade2018_realistic_v15-v1/250000/F22484D3-E820-F040-8E63-0864695D025B.root
+    test_events: [96136, 96464, 96731, 98026, 99382]
+    groups:
+      CERN: /eos/user/m/mrieger/public/hbt/sync_run2_pp_2018/sync1/mc_hh_vbf.root
+
+categories:
+  # selection expressions follow the standard "numexpr" syntax
+  etau, OS, iso: ((channel == 1) & (region == 1))
+  # etau, OS, non-iso: ((channel == 1) & (region == 2))
+  # etau, SS, iso: ((channel == 1) & (region == 3))
+  # etau, SS, non-iso: ((channel == 1) & (region == 4))
+  mutau, OS, iso: ((channel == 2) & (region == 1))
+  # mutau, OS, non-iso: ((channel == 2) & (region == 2))
+  # mutau, SS, iso: ((channel == 2) & (region == 3))
+  # mutau, SS, non-iso: ((channel == 2) & (region == 4))
+  tautau, OS, iso: ((channel == 3) & (region == 1))
+  # tautau, OS, non-iso: ((channel == 3) & (region == 2))
+  # tautau, SS, iso: ((channel == 3) & (region == 3))
+  # tautau, SS, non-iso: ((channel == 3) & (region == 4))
+
+variables:
+  - run
+  - lumi
+  - event
+  - rho
+  - pu
+  - channel
+  - region
+  - n_jets
+  - n_btags
+  # - electron_pt
+  # - electron_eta
+  # - electron_phi
+  # - electron_charge
+  # - electron_iso
+  # - muon_pt
+  # - muon_eta
+  # - muon_phi
+  # - muon_charge
+  # - muon_iso
+  # - tau1_pt
+  # - tau1_eta
+  # - tau1_phi
+  # - tau1_charge
+  # - tau1_decay_mode
+  # - tau1_id_byDeepTau2017v2p1VSjetraw
+  # - tau2_pt
+  # - tau2_eta
+  # - tau2_phi
+  # - tau2_charge
+  # - tau2_decay_mode
+  # - tau2_id_byDeepTau2017v2p1VSjetraw
+  # - jet1_pt
+  # - jet1_eta
+  # - jet1_phi
+  # - jet1_btag
+  # - jet2_pt
+  # - jet2_eta
+  # - jet2_phi
+  # - jet2_btag
+  # - met_pt
+  # - met_phi
+  # - met_pt_uncorrected
+  # - met_phi_uncorrected
+  # - ll_m
+  # - ll_dr
+  # - fastmtt_likelihood
+  # - fastmtt_m
