@@ -144,7 +144,7 @@ def draw_variable_comparison(dataset, variable, diffs, path, epsilon=1e-5):
     if os.path.exists(path):
         os.remove(path)
     fig.savefig(path, dpi=120, bbox_inches="tight")
-    fig.close()
+    plt.close(fig)
 
 
 #
