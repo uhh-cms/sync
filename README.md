@@ -2,6 +2,12 @@
 
 This repository contains tools to synchronize frameworks between groups in terms of event yields, categorization, and object definitions.
 
+##### CI
+
+There is a CI running on every commit that does a quick comparison of files and writes several tables and plots.
+
+You can checkout the latest *CI job artifacts* [here](https://gitlab.cern.ch/hh/synchronization/-/jobs/artifacts/master/browse/data?job=quick_comparison).
+
 
 ### Setup
 
