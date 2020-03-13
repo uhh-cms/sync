@@ -25,6 +25,8 @@ cli = None
 config = None
 cache = None
 
+MISSING = -999.
+
 
 #
 # helpers
@@ -142,6 +144,7 @@ def draw_variable_comparison(dataset, variable, diffs, path, epsilon=1e-5):
     if os.path.exists(path):
         os.remove(path)
     fig.savefig(path, dpi=120, bbox_inches="tight")
+    fig.close()
 
 
 #
@@ -232,7 +235,7 @@ def compare_yields(dataset, group1, group2):
     """
     print("## Yield comparison for dataset {} between {} and {}\n".format(dataset, group1, group2))
 
-    headers = ["category / type", "sum", "common", "{} - {}".format(group1, group2),
+    headers = ["category / type", group1, group2, "common", "{} - {}".format(group1, group2),
         "{} - {}".format(group2, group1)]
     table = []
 
@@ -246,7 +249,7 @@ def compare_yields(dataset, group1, group2):
         s1 = set(_df1["event"].values)
         s2 = set(_df2["event"].values)
 
-        table.append((cat, len(s1 | s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
+        table.append((cat, len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
 
     print_table(table, headers=headers)
 
@@ -283,8 +286,8 @@ def compare_event(dataset, event=None, variables=None, interactive=True):
             idxs = df.eval(selection)
             n = sum(idxs)
             if n == 0:
-                # fill "-" as missing value
-                row.extend("-" for _ in variables)
+                # fill some missing value
+                row.extend(MISSING for _ in variables)
             else:
                 if n != 1:
                     raise Exception("event {} contained {} times in dataset {} of group {}".format(
@@ -364,12 +367,14 @@ def check_missing_events(dataset, group1, group2, variables=None, interactive=Tr
     def traverse_diff(group1, group2, df, diff, can_reverse=False):
         print("\n### Traversing {} - {}\n".format(group1, group2))
 
+        print("missing: {}\n".format(",".join(str(e) for e in diff)))
+
         for event in diff:
             headers = ["# {}".format(event)] + list(variables)
             row = [group1]
 
             idxs = df.eval("(event == {})".format(event))
-            if len(idxs) != 1:
+            if idxs.sum() != 1:
                 raise Exception("event {} contained {} times in dataset {} of group {}".format(
                     event, len(idxs), dataset, group1))
             row.extend(df[idxs][v].values[0] for v in variables)
@@ -437,7 +442,7 @@ def check_common_events(dataset, groups=None, variables=None, interactive=True):
         for group in groups:
             df = cache.get(dataset, group)
             idxs = df.eval(selection)
-            if len(idxs) != 0:
+            if idxs.sum() != 1:
                 raise Exception("event {} contained {} times in dataset {} of group {}".format(
                     event, len(idxs), dataset, group))
             row = [group] + [df[idxs][v].values[0] for v in variables]
@@ -579,4 +584,6 @@ def write_all():
         write_event(dataset)
 
     # create some visualizations
-    visualize_variable(variables=["rho", "pu", "n_jets", "n_btags"])
+    visualize_variable(variables=[
+        "rho", "pu", "n_jets", "n_btags", "jet1_pt", "jet1_eta", "tau1_pt", "tau1_eta",
+    ])

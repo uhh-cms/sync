@@ -115,13 +115,13 @@ class Config(ForwardDict):
             if self._dataset_group_valid(dataset, group)
         ]
 
-    def get_file(self, dataset, group):
+    def get_files(self, dataset, group):
         data = self["datasets"][dataset]["groups"][group]
-        return data["path"] if isinstance(data, dict) else data
+        return data["files"] if isinstance(data, dict) else data
 
-    def get_translation(self, dataset, group):
+    def get_transformation(self, dataset, group):
         data = self["datasets"][dataset]["groups"][group]
-        return data.get("translation") if isinstance(data, dict) else None
+        return data.get("transform") if isinstance(data, dict) else None
 
     def get_variables(self):
         return self["variables"]
