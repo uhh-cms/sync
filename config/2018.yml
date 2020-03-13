@@ -14,7 +14,7 @@ datasets:
         transform: transform_mibllr_2018
       PIKOSI:
         files:
-          mutau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_single_muon_2018.root
+          mutau: /eos/home-m/mdidomen/sync_2020_big/sync_single_muon_2018.root
         transform: transform_pikosi_2018
 
   data_e:
@@ -32,7 +32,7 @@ datasets:
         transform: transform_mibllr_2018
       PIKOSI:
         files:
-          etau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_single_electron_2018.root
+          etau: /eos/home-m/mdidomen/sync_2020_big/sync_single_electron_2018.root
         transform: transform_pikosi_2018
 
   data_tau:
@@ -46,7 +46,7 @@ datasets:
         transform: transform_cern_2018
       PIKOSI:
         files:
-          tautau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_single_tau_2018.root
+          tautau: /eos/home-m/mdidomen/sync_2020_big/sync_single_tau_2018.root
         transform: transform_pikosi_2018
 
   mc_hh_vbf:
@@ -64,9 +64,9 @@ datasets:
         transform: transform_mibllr_2018
       PIKOSI:
         files:
-          mutau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_vbf_hh_muTau_2018.root
-          etau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_vbf_hh_eTau_2018.root
-          tautau: /eos/home-m/mrieger/public/hbt/maria_sync_2020_big/sync_vbf_hh_tauTau_2018.root
+          mutau: /eos/home-m/mdidomen/sync_2020_big/sync_vbf_hh_muTau_2018.root
+          etau: /eos/home-m/mdidomen/sync_2020_big/sync_vbf_hh_eTau_2018.root
+          tautau: /eos/home-m/mdidomen/sync_2020_big/sync_vbf_hh_tauTau_2018.root
         transform: transform_pikosi_2018
 
 categories:
