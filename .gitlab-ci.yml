@@ -9,15 +9,15 @@ build_image:
     - docker-image-build
   script: "echo Building image ${CI_REGISTRY_IMAGE} ..."
   variables:
-    CONTEXT_DIR: "docker"
-    TO: "${CI_REGISTRY_IMAGE}:latest"
-    NO_CACHE: "true"
+    CONTEXT_DIR: docker
+    TO: ${CI_REGISTRY_IMAGE}:latest
+    NO_CACHE: true
 
 quick_comparison:
   stage: sync
   tags:
     - docker
-  image: gitlab-registry.cern.ch/hh/synchronization:latest
+  image: ${CI_REGISTRY_IMAGE}:latest
   script:
     - echo "${KRB_PASS}" | kinit ${KRB_USER}@CERN.CH
     - klist
