@@ -1,3 +1,10 @@
+# Framework synchronization tools
+
+- Setup via `source setup.sh`
+- Requires Python ≥ 3.9
+- Creates a venv and installs dependencies
+
+<!--
 # CMS HH → bb𝝉𝝉 synchronization
 
 This repository contains tools to synchronize frameworks between groups in terms of event yields, categorization, and object definitions.
@@ -7,7 +14,6 @@ This repository contains tools to synchronize frameworks between groups in terms
 There is a CI running on every commit that does a quick comparison of files and writes several tables and plots.
 
 You can checkout the latest *CI job artifacts* [here](https://gitlab.cern.ch/hh/synchronization/-/jobs/artifacts/master/browse/data?job=quick_comparison).
-
 
 ### Setup
 
@@ -30,7 +36,6 @@ You can also run the docker container associated to this repository and configur
 # in the container, do
 kinit YOUR_USER@CERN.CH
 ```
-
 
 ### Usage
 
@@ -127,7 +132,7 @@ In [1]: show_yields()
 
 - `write_all()`: Writes all tables and plots defined in the synchronization tools.
 
-
 ### Note on data handling
 
 To keep the repository small, the actual root input files for comparison should not be committed. Instead, those files can be located on AFS, Dropbox/CERNBox, etc, which are then copied or downloaded to a local directory the first time the synchronization tool is started.
+-->
