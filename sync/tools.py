@@ -8,16 +8,18 @@ from __future__ import annotations
 
 __all__ = ["Tools"]
 
+import os
+import math
 import argparse
-# import os
+import itertools
+import subprocess
 # import sys
-# import math
 # import copy
 # import random
 # import contextlib
 # import collections
-# import itertools
 
+import numpy as np
 import tabulate  # type: ignore[import-untyped]
 
 from sync.config import Config
@@ -64,6 +66,12 @@ class Tools(object):
     def _print_header(self, level: int, msg: str) -> None:
         text = f"{(level + 1) * '#'} {msg}"
         print(f"\n{colored(text, **self.header_styles[level])}\n")
+
+    def _show_plot(self, path: str) -> None:
+        if not self.args.view_cmd:
+            return
+
+        subprocess.run(f"{self.args.view_cmd} '{path}'", shell=True, executable="/bin/bash")
 
     @expose
     def print_config(self) -> None:
@@ -416,194 +424,139 @@ class Tools(object):
 
     #     print_table(table, headers=headers, floatfmt=".4f")
 
-    # TODO
-    # def visualize_variable(dataset=None, variables=None, epsilon=1e-5):
-    #     """
-    #     Creates a visualization for a specific *dataset* and *variables* and saves it in the plot
-    #     directory. When *dataset* is *None*, all available datasets are used. When *variables* is
-    #     *None*, the variables defined in the configuration are used.
-    #     """
-    #     import numpy as np
+    @expose
+    def visualize_variable(
+        self,
+        dataset: str | None = None,
+        variables: str | None = None,
+        epsilon: float = 1e-5,
+    ) -> None:
+        """
+        Creates a visualization for a specific *dataset* and *variables* and saves it in the plot
+        directory. When *dataset* is *None*, all available datasets are used. When *variables* is
+        *None*, the variables defined in the configuration are used.
+        """
+        # select datasets and variables
+        _datasets = self.config.select_datasets(dataset)
+        _variables = self.config.select_variables(variables)
 
-    #     # default datasets
-    #     datasets = get_datasets(dataset)
+        def visualize(dataset: str, variable: str) -> None:
+            diffs = {}
+            for group1, group2 in itertools.combinations(self.config.get_groups(dataset), 2):
+                # get common events
+                df1 = self.loader(dataset, group1)[["event", variable]].sort_values(by=["event"])
+                df2 = self.loader(dataset, group2)[["event", variable]].sort_values(by=["event"])
+                s1 = set(df1["event"].values)
+                s2 = set(df2["event"].values)
+                common_events = sorted(list(s1 & s2))
 
-    #     # default variables
-    #     variables = get_variables(variables)
+                # get arrays (event,variable) for common events
+                v1 = df1.values[np.isin(df1.values[:, 0], common_events)].astype(float)
+                v2 = df2.values[np.isin(df2.values[:, 0], common_events)].astype(float)
 
-    #     def visualize(dataset, variable):
-    #         diffs = {}
-    #         for group1, group2 in itertools.combinations(config.get_groups(dataset), 2):
-    #             # get common events
-    #             df1 = cache.get(dataset, group1)[["event", variable]].sort_values(by=["event"])
-    #             df2 = cache.get(dataset, group2)[["event", variable]].sort_values(by=["event"])
-    #             s1 = set(df1["event"].values)
-    #             s2 = set(df2["event"].values)
-    #             common_events = sorted(list(s1 & s2))
+                # get variable difference
+                diff = v1[:, 1] - v2[:, 1]
+                reldiff = 2 * diff / (v1[:, 1] + v2[:, 1])
 
-    #             # get arrays (event,variable) for common events
-    #             v1 = df1.values[np.isin(df1.values[:, 0], common_events)].astype(float)
-    #             v2 = df2.values[np.isin(df2.values[:, 0], common_events)].astype(float)
+                # store relative difference
+                diffs[(group1, group2)] = reldiff
 
-    #             # get variable difference
-    #             diff = v1[:, 1] - v2[:, 1]
-    #             reldiff = 2 * diff / (v1[:, 1] + v2[:, 1])
+            # draw the comparison
+            path = os.path.join(self.args.plot_dir, f"comparison__{dataset}__{variable}.png")
+            draw_variable_comparison(dataset, variable, diffs, path, epsilon=epsilon)
 
-    #             # store relative difference
-    #             diffs[(group1, group2)] = reldiff
+            # show it when possible
+            self._show_plot(path)
 
-    #         # draw the comparison
-    #         path = os.path.join(cli.plot_dir, "comparison__{}__{}.png".format(dataset, variable))
-    #         draw_variable_comparison(dataset, variable, diffs, path, epsilon=epsilon)
-
-    #     # loop over all datasets and variables
-    #     for dataset in datasets:
-    #         # skip when less than two groups are participating
-    #         n_groups = len(config.get_groups(dataset))
-    #         if n_groups < 2:
-    #             print("only {} group(s) are synchronizing dataset {}, skip".format(n_groups, dataset))
-    #             continue
-    #         for variable in variables:
-    #             visualize(dataset, variable)
-
-
-####################################################################################################
-# old code that needs porting / refactoring for additiona sync tools
-
-
-# def draw_variable_comparison(dataset, variable, diffs, path, epsilon=1e-5):
-#     import matplotlib
-#     matplotlib.use("Agg")
-#     import matplotlib.pyplot as plt
-#     import networkx as nx
-
-#     # plot title
-#     title = "Dataset '{}', Variable '{}'".format(dataset, variable)
-
-#     # diffs is a dict with keys being 2-tuples of groups,
-#     # extract sorted groups
-#     groups = sorted(list(set(sum((list(tpl) for tpl in diffs.keys()), []))))
-
-#     # create a networkx graph
-#     fig, ax = plt.subplots(figsize=(10, 10))
-#     ax.set_xlim(-1.1, 1.1)
-#     ax.set_ylim(-1.1, 1.2)
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-#     fig.tight_layout()
-#     graph = nx.Graph()
-
-#     # helper to compute the rotation for group i
-#     def i2phi(i):
-#         # add 90 deg offset to start at the top
-#         return i * 2 * math.pi / len(groups) + math.pi / 2.
-
-#     # helper to translate from polar to cartesian coordinates
-#     def p2c(r, phi, y_offset=0.):
-#         return (r * math.cos(phi), r * math.sin(phi) + y_offset)
-
-#     # prepare graph attributes
-#     node_pos = {}
-#     label_pos = {}
-#     labels = {}
-#     for i, group in enumerate(groups):
-#         # y offset to align the shape vertically
-#         y_offset = -0.5 * (1 + math.sin(i2phi(len(groups) // 2)))
-#         # calculate positions
-#         phi = i2phi(i)
-#         node_pos[i] = p2c(0.8, phi, y_offset)
-#         label_pos[i] = p2c(0.95, phi, y_offset)
-#         labels[i] = group
-#         graph.add_node(i, pos=node_pos[i])
-
-#     # draw nodes and labels
-#     nx.draw(graph, node_pos, node_color="blue")
-#     nx.draw_networkx_labels(graph, label_pos, labels, font_size=14)
-#     nx.draw_networkx_labels(graph, {0: p2c(1.1, math.pi / 2.)}, {0: title}, font_size=18)
-
-#     # add edges, based on differences
-#     for (group1, group2), _diffs in diffs.items():
-#         # compile the differences into a single value
-#         # method 1: take the absolute variance of non-zero values
-#         idxs = _diffs != 0
-#         diff = abs(_diffs[_diffs != 0].var()) if idxs.any() else 0.
-#         # method 2: take the std of non-zero values
-#         # diff = _diffs[_diffs != 0].std() if idxs.any() else 0.
-
-#         # define a line weight between 1 and 10 by using an activation-like approach
-#         # see https://www.wolframalpha.com/input/?i=plot+10+*+tanh%28x+*+2%29+for+x%3D0+to+1.
-#         weight = 2 if diff <= epsilon else max(1, 10 * math.tanh(diff * 2))
-
-#         # define a line color
-#         color = "green" if diff <= epsilon else "red"
-
-#         nx.draw_networkx_edges(graph, node_pos, [(groups.index(group1), groups.index(group2))],
-#             width=weight, edge_color=color)
-
-#     # save it
-#     print("save comparison plot of variable {} in dataset {} at {}".format(variable, dataset, path))
-#     if os.path.exists(path):
-#         os.remove(path)
-#     fig.savefig(path, dpi=120, bbox_inches="tight")
-#     plt.close(fig)
+        # loop over all datasets and variables
+        for dataset in _datasets:
+            # skip when less than two groups are participating
+            n_groups = len(self.config.get_groups(dataset))
+            if n_groups < 2:
+                print(f"only {n_groups} group(s) are synchronizing dataset {dataset}, skip")
+                continue
+            for variable in _variables:
+                visualize(dataset, variable)
 
 
-# def write_event(dataset, event=None, variables=None):
-#     """
-#     Writes the event comparison tables obtained by :py:func:`compare_event` into a file for a
-#     specific *dataset* and *variables* for a selected *event*. When *None*, the *test_events* list
-#     in the configuration entry for that dataset is used. *variables* is forwarded to
-#     :py:func:`compare_event`.
-#     """
-#     # default events
-#     if not event:
-#         events = config["datasets"][dataset]["test_events"]
+def draw_variable_comparison(
+    dataset: str,
+    variable: str,
+    diffs: dict[tuple[str, str], np.ndarray],
+    path: str,
+    epsilon: float = 1e-5,
+) -> None:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import networkx as nx  # type: ignore[import-untyped]
 
-#     path = os.path.join(cli.table_dir, "events__{}.md".format(dataset))
-#     if os.path.exists(path):
-#         os.remove(path)
+    # plot title
+    title = f"Dataset '{dataset}', Variable '{variable}'"
 
-#     print("write event comparison for dataset {} to {}".format(dataset, path))
+    # diffs is a dict with keys being 2-tuples of groups,
+    # extract sorted groups
+    groups = sorted(list(set(sum((list(tpl) for tpl in diffs.keys()), []))))
 
-#     with open(path, "w") as f:
-#         with change_stdout(f):
-#             compare_event(dataset, events, variables=variables, interactive=False)
+    # create a networkx graph
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.set_xlim(-1.1, 1.1)
+    ax.set_ylim(-1.1, 1.2)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    fig.tight_layout()
+    graph = nx.Graph()
 
+    # helper to compute the rotation for group i
+    def i2phi(i):
+        # add 90 deg offset to start at the top
+        return i * 2 * math.pi / len(groups) + math.pi / 2.0
 
-# def write_yields(dataset=None):
-#     """
-#     Writes the yield tables obtained by :py:func:`show_yields` into a file per dataset in the
-#     table directory. When *dataset* is *None*, all datasets are evaluated sequentially.
-#     """
-#     datasets = get_datasets(dataset)
+    # helper to translate from polar to cartesian coordinates
+    def p2c(r, phi, y_offset=0.0):
+        return (r * math.cos(phi), r * math.sin(phi) + y_offset)
 
-#     for dataset in datasets:
-#         path = os.path.join(cli.table_dir, "yields__{}.md".format(dataset))
-#         if os.path.exists(path):
-#             os.remove(path)
+    # prepare graph attributes
+    node_pos = {}
+    label_pos = {}
+    labels = {}
+    for i, group in enumerate(groups):
+        # y offset to align the shape vertically
+        y_offset = -0.5 * (1 + math.sin(i2phi(len(groups) // 2)))
+        # calculate positions
+        phi = i2phi(i)
+        node_pos[i] = p2c(0.8, phi, y_offset)
+        label_pos[i] = p2c(0.95, phi, y_offset)
+        labels[i] = group
+        graph.add_node(i, pos=node_pos[i])
 
-#         print("write yields for dataset {} to {}".format(dataset, path))
+    # draw nodes and labels
+    nx.draw(graph, node_pos, node_color="blue")
+    nx.draw_networkx_labels(graph, label_pos, labels, font_size=14)
+    nx.draw_networkx_labels(graph, {0: p2c(1.1, math.pi / 2.0)}, {0: title}, font_size=18)
 
-#         with open(path, "w") as f:
-#             with change_stdout(f):
-#                 show_yields(dataset)
+    # add edges, based on differences
+    for (group1, group2), _diffs in diffs.items():
+        # compile the differences into a single value
+        # method 1: take the absolute variance of non-zero values
+        idxs = _diffs != 0
+        diff = abs(_diffs[_diffs != 0].var()) if idxs.any() else 0.0
+        # method 2: take the std of non-zero values
+        # diff = _diffs[_diffs != 0].std() if idxs.any() else 0.
 
+        # define a line weight between 1 and 10 by using an activation-like approach
+        # see https://www.wolframalpha.com/input/?i=plot+10+*+tanh%28x+*+2%29+for+x%3D0+to+1.
+        weight = 2 if diff <= epsilon else max(1, 10 * math.tanh(diff * 2))
 
-# def write_all():
-#     """
-#     Writes all tables and plots defined in the synchronization tools.
-#     """
-#     datasets = get_datasets()
+        # define a line color
+        color = "green" if diff <= epsilon else "red"
 
-#     # write yields for all datasets
-#     for dataset in datasets:
-#         write_yields(dataset)
+        nx.draw_networkx_edges(graph, node_pos, [(groups.index(group1), groups.index(group2))],
+            width=weight, edge_color=color)
 
-#     # write all event comparison tables
-#     for dataset in datasets:
-#         write_event(dataset)
-
-#     # create some visualizations
-#     visualize_variable(variables=[
-#         "rho", "pu", "n_jets", "n_btags", "jet1_pt", "jet1_eta", "tau1_pt", "tau1_eta",
-#     ])
+    # save it
+    print(f"save comparison plot of variable {variable} in dataset {dataset} at {path}")
+    if os.path.exists(path):
+        os.remove(path)
+    fig.savefig(path, dpi=120, bbox_inches="tight")
+    plt.close(fig)

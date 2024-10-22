@@ -111,6 +111,27 @@ def is_pattern(s: str) -> bool:
     return "?" in s or "*" in s
 
 
+def which(prog: str) -> str | None:
+    """
+    Pythonic ``which`` implementation. Returns the path to an executable *prog* by searching in
+    *PATH*, or *None* when it could not be found.
+    """
+    is_executable = lambda path: os.path.isfile(path) and os.access(path, os.X_OK)
+
+    # prog can also be a path
+    dirname, _ = os.path.split(str(prog))
+    if dirname:
+        if is_executable(str(prog)):
+            return prog
+    elif "PATH" in os.environ:
+        for search_path in os.environ["PATH"].split(os.pathsep):
+            path = os.path.join(search_path.strip('"'), prog)
+            if is_executable(path):
+                return path
+
+    return None
+
+
 def print_usage(funcs: list[Callable], margin: bool = True) -> None:
     if margin:
         print(f"\n{' Usage '.center(100, '-')}")

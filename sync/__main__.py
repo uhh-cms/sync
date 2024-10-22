@@ -12,7 +12,7 @@ import sys
 import argparse
 
 import sync
-from sync.utils import colored, print_usage
+from sync.utils import colored, which, print_usage
 
 
 def get_args() -> argparse.Namespace:
@@ -21,6 +21,7 @@ def get_args() -> argparse.Namespace:
     sync_dir = os.path.dirname(this_dir)
     default_config = os.path.join(sync_dir, "config", "2022pre.yml")
     default_output_dir = os.path.expandvars("$SYNC_DATA_DIR/sync_files")
+    default_view_cmd = which("imgcat") and "imgcat"
 
     # get arguments
     parser = argparse.ArgumentParser(
@@ -51,8 +52,12 @@ def get_args() -> argparse.Namespace:
         default="fancy_grid",
         help="the tabulate table format",
     )
+    parser.add_argument(
+        "--view-cmd",
+        default=default_view_cmd,
+        help="a command to plots in the terminal",
+    )
     parser.add_argument("--flush", action="store_true", help="flush file cache first")
-    # parser.add_argument("--ci", action="store_true", help="activate ci mode")
     parser.add_argument("cmd", nargs="*", help="when set, run this command and exit")
     args = parser.parse_args()
 
