@@ -22,6 +22,7 @@ import tabulate  # type: ignore[import-untyped]
 
 from sync.config import Config
 from sync.loader import DataLoader
+from sync.utils import colored
 from sync._types import Callable
 
 
@@ -36,6 +37,12 @@ def is_exposed(func: Callable) -> bool:
 
 class Tools(object):
 
+    header_styles = {
+        1: {"color": "cyan", "style": "bright"},
+        2: {"color": "cyan"},
+        3: {"color": "default"},
+    }
+
     def __init__(self, args: argparse.Namespace, config: Config, loader: DataLoader) -> None:
         super().__init__()
 
@@ -49,6 +56,14 @@ class Tools(object):
             for name in dir(self)
             if is_exposed(getattr(self, name))
         }
+
+    def _print_table(self, *args, **kwargs) -> None:
+        kwargs.setdefault("tablefmt", self.args.table_format)
+        print(tabulate.tabulate(*args, **kwargs))
+
+    def _print_header(self, level: int, msg: str) -> None:
+        text = f"{(level + 1) * '#'} {msg}"
+        print(f"\n{colored(text, **self.header_styles[level])}\n")
 
     @expose
     def print_config(self) -> None:
@@ -81,7 +96,7 @@ class Tools(object):
         datasets = self.config.select_datasets(dataset)
 
         def show(dataset: str) -> None:
-            print(f"## Yields for dataset {dataset}\n")
+            self._print_header(1, f"Yields for dataset {dataset}")
             groups = self.config.get_groups(dataset)
             headers = ["category / group"] + groups
             table = []
@@ -101,167 +116,187 @@ class Tools(object):
                         )
                         raise
                 table.append(line)
-            print(tabulate.tabulate(table, headers=headers, tablefmt=self.args.table_format))
+            self._print_table(table, headers=headers)
 
         for dataset in datasets:
             show(dataset)
             print("")
 
-    # TODO
-    # def compare_yields(dataset, group1, group2):
-    #     """
-    #     Compares the yields in a specific *dataset* between *group1* and *group2*.
-    #     """
-    #     print("## Yield comparison for dataset {} between {} and {}\n".format(dataset, group1, group2))
+    @expose
+    def compare_yields(self, dataset: str, group1: str, group2: str) -> None:
+        """
+        Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
+        all known categories.
+        """
+        self._print_header(1, f"Yield comparison for dataset {dataset} between {group1} and {group2}")
 
-    #     headers = ["category / type", group1, group2, "common", "{} - {}".format(group1, group2),
-    #         "{} - {}".format(group2, group1)]
-    #     table = []
+        headers = [
+            "category / type",
+            group1,
+            group2,
+            "common",
+            f"{group1} - {group2}",
+            f"{group2} - {group1}",
+        ]
+        table = []
 
-    #     df1 = cache.get(dataset, group1)
-    #     df2 = cache.get(dataset, group2)
-    #     for cat, cat_expr in config.get_categories().items():
-    #         _df1 = df1[df1.eval(cat_expr)]
-    #         _df2 = df2[df2.eval(cat_expr)]
+        df1 = self.loader(dataset, group1)
+        df2 = self.loader(dataset, group2)
+        for cat, cat_expr in self.config.get_categories().items():
+            _df1 = df1[df1.eval(cat_expr)]
+            _df2 = df2[df2.eval(cat_expr)]
 
-    #         # get sets of the event id for simple comparison
-    #         s1 = set(_df1["event"].values)
-    #         s2 = set(_df2["event"].values)
+            # get sets of the event id for simple comparison
+            s1 = set(_df1["event"].values)
+            s2 = set(_df2["event"].values)
 
-    #         table.append((cat, len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
+            table.append((cat, len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
 
-    #     print_table(table, headers=headers)
+        self._print_table(table, headers=headers)
 
-    # TODO
-    # def check_missing_events(
-    #     self,
-    #     dataset: str,
-    #     group1: str,
-    #     group2: str,
-    #     variables=None,
-    #     interactive=True,
-    # ) -> None:
-    #     """
-    #     Traverses missing events between *group1* and *group2* in a specific *dataset* and prints a
-    #     table with specific *variables* per event. When *variables* is *None*, the variables defined in
-    #     the configuration are used.
-    #     """
-    #     print("## Missing events for dataset {} between {} and {}\n".format(dataset, group1, group2))
+    @expose
+    def check_missing_events(
+        self,
+        dataset: str,
+        group1: str,
+        group2: str,
+        variables: str | None = None,
+        interactive: bool = True,
+    ) -> None:
+        """
+        Traverses missing events between *group1* and *group2* in a specific *dataset* and prints a
+        table with specific *variables* per event. When *variables* is *None*, all variables defined
+        in the configuration are used. In case of multiple events, a prompt allows to either stop or
+        continue the comparison when *interactive* is *True*.
+        """
+        self._print_header(1, f"Missing events for dataset {dataset} between {group1} and {group2}")
 
-    #     # default variables
-    #     variables = get_variables(variables)
+        # select variables
+        _variables = self.config.select_variables(variables)
 
-    #     # get data frames
-    #     df1 = cache.get(dataset, group1)
-    #     df2 = cache.get(dataset, group2)
+        # get data frames
+        df1 = self.loader(dataset, group1)
+        df2 = self.loader(dataset, group2)
 
-    #     # create event set differences
-    #     s1 = set(df1["event"].values)
-    #     s2 = set(df2["event"].values)
-    #     diff12 = s1 - s2
-    #     diff21 = s2 - s1
+        # create event set differences
+        s1 = set(df1["event"].values)
+        s2 = set(df2["event"].values)
+        diff12 = s1 - s2
+        diff21 = s2 - s1
 
-    #     print("### Stats and differences\n")
-    #     print("{}: {} events".format(group1, len(s1)))
-    #     print("{}: {} events".format(group2, len(s2)))
-    #     print("{} - {}: {} events".format(group1, group2, len(diff12)))
-    #     print("{} - {}: {} events".format(group2, group1, len(diff21)))
-    #     print("{} | {}: {} events".format(group1, group2, len(s1 | s2)))
-    #     print("{} & {}: {} events".format(group1, group2, len(s1 & s2)))
+        self._print_header(2, "Stats and differences")
+        print(f"{group1}: {len(s1)} events")
+        print(f"{group2}: {len(s2)} events")
+        print(f"{group1} - {group2}: {len(diff12)} events")
+        print(f"{group2} - {group1}: {len(diff21)} events")
+        print(f"{group1} | {group2}: {len(s1 | s2)} events")
+        print(f"{group1} & {group2}: {len(s1 & s2)} events")
 
-    #     def traverse_diff(group1, group2, df, diff, can_reverse=False):
-    #         print("\n### Traversing {} - {}\n".format(group1, group2))
+        def traverse_diff(group1, group2, df, diff, can_reverse=False):
+            self._print_header(2, f"Traversing {group1} - {group2}")
 
-    #         print("missing: {}\n".format(",".join(str(e) for e in diff)))
+            print(f"missing: {','.join(str(e) for e in diff)}\n")
 
-    #         for event in diff:
-    #             headers = ["# {}".format(event)] + list(variables)
-    #             row = [group1]
+            for event in diff:
+                headers = [f"# {event}"] + _variables
+                row = [group1]
 
-    #             idxs = df.eval("(event == {})".format(event))
-    #             if idxs.sum() != 1:
-    #                 raise Exception("event {} contained {} times in dataset {} of group {}".format(
-    #                     event, len(idxs), dataset, group1))
-    #             row.extend(df[idxs][v].values[0] for v in variables)
+                idxs = df.eval(f"(event == {event})")
+                if idxs.sum() != 1:
+                    raise Exception(
+                        f"event {event} contained {len(idxs)} times in dataset {dataset} of group"
+                        f" {group1}",
+                    )
+                row.extend(df[idxs][v].values[0] for v in _variables)
 
-    #             print_table([row], headers=headers, floatfmt=".4f")
+                self._print_table([row], headers=headers, floatfmt=".4f")
 
-    #             if interactive:
-    #                 print("")
-    #                 if can_reverse:
-    #                     inp = raw_input("press enter to continue, 'r' to reverse groups, or any other "
-    #                         "key to stop: ").strip()
-    #                     if inp.lower() == "r":
-    #                         return True
-    #                     elif inp:
-    #                         return False
-    #                 else:
-    #                     inp = raw_input("press enter to continue, or any other key to stop: ").strip()
-    #                     if inp:
-    #                         return False
-    #             print("")
-    #         return True
+                if interactive:
+                    print("")
+                    if can_reverse:
+                        inp = input(
+                            "press enter to continue, 'r' to reverse groups, or any other key to "
+                            "stop: ",
+                        ).strip()
+                        if inp.lower() == "r":
+                            return True
+                        if inp:
+                            return False
+                    else:
+                        inp = input("press enter to continue, or any other key to stop: ").strip()
+                        if inp:
+                            return False
+                print("")
+            return True
 
-    #     # traverse diffs, based on which group misses events
-    #     if len(diff12) and len(diff21):
-    #         # both groups miss some events that the other group has
-    #         # so allow for switching what set to traverse
-    #         if traverse_diff(group1, group2, df1, diff12, can_reverse=True):
-    #             print("")
-    #             traverse_diff(group2, group1, df2, diff21)
-    #     elif len(diff12):
-    #         traverse_diff(group1, group2, df1, diff12)
-    #     elif len(diff21):
-    #         traverse_diff(group2, group1, df2, diff21)
+        # traverse diffs, based on which group misses events
+        if len(diff12) and len(diff21):
+            # both groups miss some events that the other group has
+            # so allow for switching what set to traverse
+            if traverse_diff(group1, group2, df1, diff12, can_reverse=True):
+                print("")
+                traverse_diff(group2, group1, df2, diff21)
+        elif len(diff12):
+            traverse_diff(group1, group2, df1, diff12)
+        elif len(diff21):
+            traverse_diff(group2, group1, df2, diff21)
 
-    # TODO
-    # def check_common_events(dataset, groups=None, variables=None, interactive=True):
-    #     """
-    #     Traverses events in a *dataset* that are common to all *groups* and prints a table with specific
-    #     *variables* per event. When *groups* is *None*, all participating groups are selected. When
-    #     *variables* is *None*, the variables defined in the configuration are used. In case of multiple
-    #     events, a prompt allows to either stop or continue the comparison when *interactive* is *True*.
-    #     """
-    #     # default groups
-    #     if not groups:
-    #         groups = config.get_groups(dataset)
+    @expose
+    def check_common_events(
+        self,
+        dataset: str,
+        groups: str | None = None,
+        variables: str | None = None,
+        interactive: bool = True,
+    ) -> None:
+        """
+        Traverses events in a *dataset* that are common to all *groups* and prints a table with
+        specific *variables* per event. When *groups* is *None*, all participating groups are
+        selected. When *variables* is *None*, the variables defined in the configuration are used.
+        In case of multiple events, a prompt allows to either stop or continue the comparison when
+        *interactive* is *True*.
+        """
+        # select groups and variables
+        _groups = self.config.select_groups(groups)
+        _variables = self.config.select_variables(variables)
 
-    #     # default variables
-    #     variables = get_variables(variables)
+        self._print_header(1, f"Common events for dataset {dataset} between {', '.join(_groups)}")
 
-    #     print("## Common events for dataset {} between {}\n".format(dataset, ", ".join(groups)))
+        # get common events
+        common: set[int] = set()
+        for group in _groups:
+            df = self.loader(dataset, group)
+            s = set(df["event"].values)
+            common = s if not common else set.intersection(common, s)
 
-    #     # get common events
-    #     common = set()
-    #     for group in groups:
-    #         df = cache.get(dataset, group)
-    #         s = set(df["event"].values)
-    #         common = s if not common else set.intersection(common, s)
+        print(f"{' & '.join(_groups)}: {len(common)} common events\n")
 
-    #     # traverse common events
-    #     for i, event in enumerate(common):
-    #         headers = ["# {}".format(event)] + list(variables)
-    #         table = []
+        # traverse common events
+        for i, event in enumerate(common):
+            headers = [f"# {event}"] + _variables
+            table = []
 
-    #         selection = "(event == {})".format(event)
-    #         for group in groups:
-    #             df = cache.get(dataset, group)
-    #             idxs = df.eval(selection)
-    #             if idxs.sum() != 1:
-    #                 raise Exception("event {} contained {} times in dataset {} of group {}".format(
-    #                     event, len(idxs), dataset, group))
-    #             row = [group] + [df[idxs][v].values[0] for v in variables]
-    #             table.append(row)
+            selection = f"(event == {event})"
+            for group in _groups:
+                df = self.loader(dataset, group)
+                idxs = df.eval(selection)
+                if idxs.sum() != 1:
+                    raise Exception(
+                        f"event {event} contained {len(idxs)} times in dataset {dataset} of group "
+                        f"{group}",
+                    )
+                row = [group] + [df[idxs][v].values[0] for v in _variables]
+                table.append(row)
 
-    #         print_table(table, headers=headers, floatfmt=".4f")
+            self._print_table(table, headers=headers, floatfmt=".4f")
 
-    #         if i < len(common) - 1:
-    #             print("")
-    #             if interactive:
-    #                 inp = raw_input("press enter to continue, or any other key to stop: ").strip()
-    #                 if inp:
-    #                     break
-    #                 print("")
+            if i < len(common) - 1:
+                print("")
+                if interactive:
+                    inp = input("press enter to continue, or any other key to stop: ").strip()
+                    if inp:
+                        break
+                    print("")
 
     # TODO
     # def compare_event(dataset, event=None, variables=None, interactive=True):

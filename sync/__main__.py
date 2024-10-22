@@ -71,11 +71,12 @@ def get_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    print(colored("\ninteractive sync tool", "cyan", style="bright"))
-    print("(ctrl+d to exit)\n")
-
     # get cli arguments
     args = get_args()
+
+    # some header
+    print(colored("\ninteractive sync tool", "cyan", style="bright"))
+    print("(ctrl+d to exit)\n")
 
     # create a config object
     print(f"load configuration : {args.config}")

@@ -35,7 +35,7 @@ action() {
     # setup virtual environment
     #
 
-    local sync_venv_dir="${SYNC_SOFTWARE_DIR}/venv"
+    local sync_venv_dir="${SYNC_SOFTWARE_DIR}/venv/sync"
     local venv_exists="$( [ -d "${sync_venv_dir}" ] && echo "true" || echo "false" )"
 
     if ! ${venv_exists}; then
