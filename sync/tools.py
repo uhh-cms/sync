@@ -9,27 +9,28 @@ from __future__ import annotations
 __all__ = ["Tools"]
 
 import argparse
+# import os
 # import sys
+# import math
 # import copy
 # import random
-# # import os
-# # import sys
-# # import math
-# # import contextlib
-# # import collections
-# # import itertools
+# import contextlib
+# import collections
+# import itertools
+
+import tabulate  # type: ignore[import-untyped]
 
 from sync.config import Config
 from sync.loader import DataLoader
 from sync._types import Callable
 
 
-def expose(func):
-    func._exposed = True
+def expose(func: Callable) -> Callable:
+    func._exposed = True  # type: ignore[attr-defined]
     return func
 
 
-def is_exposed(func):
+def is_exposed(func: Callable) -> bool:
     return getattr(func, "_exposed", False)
 
 
@@ -71,42 +72,40 @@ class Tools(object):
         for name in self.config.get_variables():
             print(f"    - {name}")
 
-    # TODO
-    # def show_yields(dataset=None):
-    #     """
-    #     Shows the yields for all groups in a specific *dataset*. When *None*, all datases are evaluated
-    #     sequentially.
-    #     """
-    #     # default datasets
-    #     datasets = get_datasets(dataset)
+    @expose
+    def show_yields(self, dataset: str | None = None) -> None:
+        """
+        Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
+        evaluated sequentially.
+        """
+        datasets = self.config.select_datasets(dataset)
 
-    #     def show(dataset):
-    #         print("## Yields for dataset {}\n".format(dataset))
+        def show(dataset: str) -> None:
+            print(f"## Yields for dataset {dataset}\n")
+            groups = self.config.get_groups(dataset)
+            headers = ["category / group"] + groups
+            table = []
+            for cat, cat_expr in self.config.get_categories().items():
+                line = [cat]
+                for group in groups:
+                    df = self.loader(dataset, group)
+                    try:
+                        line.append(sum(df.eval(cat_expr)))
+                    except ImportError:
+                        raise
+                    except Exception as e:
+                        e.args = (
+                            f"evaluation failed for group {group}, dataset {dataset}, category "
+                            f"{cat}: {e}",
+                            *e.args[1:],
+                        )
+                        raise
+                table.append(line)
+            print(tabulate.tabulate(table, headers=headers, tablefmt=self.args.table_format))
 
-    #         groups = config.get_groups(dataset)
-    #         headers = ["category / group"] + groups
-    #         table = []
-
-    #         for cat, cat_expr in config.get_categories().items():
-    #             line = [cat]
-    #             for group in groups:
-    #                 df = cache.get(dataset, group)
-    #                 try:
-    #                     line.append(sum(df.eval(cat_expr)))
-    #                 except ImportError:
-    #                     raise
-    #                 except Exception as e:
-    #                     e.message = "evaluation failed for group {}, dataset {}, category {}\n{}".format(
-    #                         group, dataset, cat, e.message)
-    #                     raise
-
-    #             table.append(line)
-
-    #         print_table(table, headers=headers)
-
-    #     for dataset in datasets:
-    #         show(dataset)
-    #         print("")
+        for dataset in datasets:
+            show(dataset)
+            print("")
 
     # TODO
     # def compare_yields(dataset, group1, group2):

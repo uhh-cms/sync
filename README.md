@@ -27,8 +27,7 @@ In general, the tool starts an interactive IPython or Python shell, prints some 
 The first time you start the tool, it will copy or download the synchronization files of all groups defined by in the configuration file set by `--config FILE` (defaults to [config/2022pre.yml](config/2022pre.yml)).
 If you want to reload the files the next time you start the tool, add `--flush`.
 
-As an example, you show the event yields per category (also defined in the config) and participating group in a certain dataset.
-The full output will look like the following.
+As an example, you can show the event yields per category (as defined in the config) and participating group in a certain dataset as demonstrated below.
 
 ```shell
 > sync
@@ -36,43 +35,44 @@ The full output will look like the following.
 interactive sync tool
 (ctrl+d to exit)
 
-tba
-```
-
-<!--
+....
 ---------------------------------------------- Usage -----------------------------------------------
 
-print_config()
+usage(func=None) -> None
+    Prints usage information of a single *func* when given, or all sync tools otherwise.
+
+print_config() -> None
     Prints a summary of the current configuration.
 
-show_yields(dataset=None)
-    Shows the yields for all groups in a specific *dataset*. When *None*, all datases are evaluated
-    sequentially.
-
-write_yields(dataset=None)
-    Writes the yield tables obtained by :py:func:`show_yields` into a file per dataset in the
-    table directory. When *dataset* is *None*, all datasets are evaluated sequentially.
-
-...  # more tools
+show_yields(dataset: str | None = None) -> None
+    Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
+    evaluated sequentially.
 
 ----------------------------------------------------------------------------------------------------
 
 In [1]: show_yields()
-## Yields for dataset data_mu
+## Yields for dataset hh
 
-╒════════════════════╤═════════╤═════════╤═════════╕
-│ category / group   │ Group X │ Group Y │ ...     │
-╞════════════════════╪═════════╪═════════╪═════════╡
-│ ≥2j ≥1b            │     180 │     180 │     ... │
-├────────────────────┼─────────┼─────────┤─────────┤
-│ ≥1j ≥1b            │     225 │     225 │     ... │
-├────────────────────┼─────────┼─────────┤─────────┤
-│ ...                │     ... │     ... │     ... │
-╘════════════════════╧═════════╧═════════╛═════════╛
+╒════════════════════╤═══════╤═══════╕
+│ category / group   │   uhh │   uzh │
+╞════════════════════╪═══════╪═══════╡
+│ all                │     6 │     6 │
+├────────────────────┼───────┼───────┤
+│ mutau, OS          │     2 │     2 │
+├────────────────────┼───────┼───────┤
+│ mutau, SS          │     0 │     0 │
+├────────────────────┼───────┼───────┤
+│ etau, OS           │     2 │     1 │
+├────────────────────┼───────┼───────┤
+│ etau, SS           │     0 │     0 │
+├────────────────────┼───────┼───────┤
+│ tautau, OS         │     2 │     3 │
+├────────────────────┼───────┼───────┤
+│ tautau, SS         │     0 │     0 │
+╘════════════════════╧═══════╧═══════╛
 
 ...  # more output
 ```
--->
 
 ## Note on data handling
 

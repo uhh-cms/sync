@@ -11,6 +11,7 @@ __all__ = ["Config"]
 import os
 import pathlib
 import itertools
+import fnmatch
 
 import yaml
 
@@ -40,6 +41,7 @@ class Config(DotDict):
         return [
             *self.get_datasets(),
             *self.get_groups(),
+            *self.get_variables(),
         ]
 
     def get_datasets(self, group: str | None = None) -> list[str]:
@@ -51,11 +53,39 @@ class Config(DotDict):
             if group in data["groups"]
         ]
 
+    def select_datasets(self, dataset: str | list[str] | None = None) -> list[str]:
+        all_datasets = self.get_datasets()
+
+        if dataset is None:
+            return all_datasets
+
+        selected_datasets: list[str] = []
+        for pattern in (dataset if isinstance(dataset, list) else [dataset]):
+            for d in all_datasets:
+                if d not in selected_datasets and fnmatch.fnmatch(d, pattern):
+                    selected_datasets.append(d)
+
+        return selected_datasets
+
     def get_groups(self, dataset: str | None = None) -> list[str]:
         if dataset is None:
             return list(set(sum((self.get_groups(d) for d in self.get_datasets()), [])))
 
         return list(self["datasets"][dataset]["groups"].keys())
+
+    def select_groups(self, group: str | list[str] | None = None) -> list[str]:
+        all_groups = self.get_groups()
+
+        if group is None:
+            return all_groups
+
+        selected_groups: list[str] = []
+        for pattern in (group if isinstance(group, list) else [group]):
+            for d in all_groups:
+                if d not in selected_groups and fnmatch.fnmatch(d, pattern):
+                    selected_groups.append(d)
+
+        return selected_groups
 
     def get_files(self, dataset: str, group: str) -> dict[str | int, str]:
         files = self["datasets"][dataset]["groups"][group]["files"]
@@ -71,6 +101,20 @@ class Config(DotDict):
 
     def get_variables(self) -> list[str]:
         return self["variables"]
+
+    def select_variables(self, variable: str | list[str] | None = None) -> list[str]:
+        all_variables = self.get_variables()
+
+        if variable is None:
+            return all_variables
+
+        selected_variables: list[str] = []
+        for pattern in (variable if isinstance(variable, list) else [variable]):
+            for d in all_variables:
+                if d not in selected_variables and fnmatch.fnmatch(d, pattern):
+                    selected_variables.append(d)
+
+        return selected_variables
 
     def get_categories(self) -> dict[str, str]:
         return self["categories"]

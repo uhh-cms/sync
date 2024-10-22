@@ -107,6 +107,10 @@ def colored(
     return f"\033[{_style};{_background};{_color}m{_msg}\033[0m"
 
 
+def is_pattern(s: str) -> bool:
+    return "?" in s or "*" in s
+
+
 def print_usage(funcs: list[Callable], margin: bool = True) -> None:
     if margin:
         print(f"\n{' Usage '.center(100, '-')}")
@@ -118,7 +122,8 @@ def print_usage(funcs: list[Callable], margin: bool = True) -> None:
         sig = sig.replace("'", "")
         print(f"{colored(func.__name__, 'green')}{sig}")
         if func.__doc__:
-            print(f"    {func.__doc__.strip()}")
+            doc = func.__doc__.strip().replace(12 * " ", 4 * " ").replace(8 * " ", 4 * " ")
+            print(f"    {doc}")
 
     if margin:
         print(f"\n{100 * '-'}\n")

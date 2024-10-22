@@ -46,7 +46,7 @@ class DataLoader(object):
         self.data: dict[str, dict[str, pd.DataFrame]] = collections.defaultdict(dict)
 
     def __call__(self, dataset, group):
-        return self.get(dataset, group)
+        return self.load(dataset, group)
 
     def get_cache_path(
         self,
