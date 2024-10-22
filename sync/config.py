@@ -72,7 +72,7 @@ class Config(DotDict):
     def get_variables(self) -> list[str]:
         return self["variables"]
 
-    def get_categories(self) -> list[str]:
+    def get_categories(self) -> dict[str, str]:
         return self["categories"]
 
     def _dataset_group_valid(self, dataset: str, group: str) -> bool:

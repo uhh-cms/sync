@@ -11,6 +11,7 @@ import sys
 import copy
 import random
 import inspect
+import contextlib
 
 from sync._types import Any, GenericAlias, Callable
 
@@ -121,6 +122,16 @@ def print_usage(funcs: list[Callable], margin: bool = True) -> None:
 
     if margin:
         print(f"\n{100 * '-'}\n")
+
+
+@contextlib.contextmanager
+def change_stdout(f):
+    orig_stdout = sys.stdout
+    sys.stdout = f
+    try:
+        yield
+    finally:
+        sys.stdout = orig_stdout
 
 
 class DotDict(dict):
