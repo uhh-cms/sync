@@ -65,6 +65,11 @@ show_yields(dataset: str | None = None) -> None
     Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
     evaluated sequentially.
 
+visualize_variable(dataset: str | None = None, variables: str | None = None, epsilon: float = 1e-05) -> None
+    Creates a visualization for a specific *dataset* and *variables* and saves it in the plot
+    directory. When *dataset* is *None*, all available datasets are used. When *variables* is
+    *None*, the variables defined in the configuration are used.
+
 ----------------------------------------------------------------------------------------------------
 
 In [1]: show_yields()
