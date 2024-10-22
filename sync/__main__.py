@@ -1,120 +1,140 @@
 # coding: utf-8
 
+"""
+Main entry point of the sync executable.
+"""
 
-import inspect
+from __future__ import annotations
 
+import os
+import re
+import sys
+import argparse
 
-def func_signature(func):
-    spec = inspect.getargspec(func)
-    args = spec.args or []
-    defaults = spec.defaults or []
-    sig = args[:len(args) - len(defaults)]
-    for pair in zip(args[-len(defaults):], defaults):
-        sig.append("%s=%s" % pair)
-    if spec.varargs:
-        sig.append("*" + spec.varargs)
-    if spec.keywords:
-        sig.append("**" + spec.keywords)
-    return sig
+import sync
+from sync.utils import colored, print_usage
 
 
-def print_usage(funcs):
-    print("\n" + " Usage ".center(100, "-") + "\n")
-
-    for func in funcs:
-        print("{}({})".format(func.__name__, ", ".join(func_signature(func))))
-        if func.__doc__:
-            print("    {}".format(func.__doc__.strip()))
-        print("")
-
-    print(100 * "-" + "\n")
-
-
-if __name__ == "__main__":
-    import os
-    import sys
-    import re
-    from argparse import ArgumentParser
-
+def get_args() -> argparse.Namespace:
     # determine directories and files
     this_dir = os.path.dirname(os.path.abspath(__file__))
     sync_dir = os.path.dirname(this_dir)
-    default_data_dir = os.path.join(sync_dir, "data")
-    default_config = os.path.join(sync_dir, "config", "2018.yml")
+    default_config = os.path.join(sync_dir, "config", "2022pre.yml")
+    default_output_dir = os.path.expandvars("$SYNC_DATA_DIR/sync_files")
 
     # get arguments
-    parser = ArgumentParser(prog="sync", description="synchronization command line tools")
-    parser.add_argument("--config", "-c", default=default_config, help="the config file to load, "
-        "paths are evaluated relative to the 'config/' directory, default: " + default_config)
-    parser.add_argument("--dataset", "-d", help="a dataset to compare, defaults to all")
-    parser.add_argument("--data-dir", default=default_data_dir, help="the directory in which "
-        "downloaded input files, created tables and plots are stored, default: " + default_data_dir)
-    parser.add_argument("--table-format", "-t", default="fancy_grid", help="the tabulate table "
-        "format, default: fancy_grid")
+    parser = argparse.ArgumentParser(
+        prog="sync",
+        description="synchronization command line tools",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--config",
+        "-c",
+        default=default_config,
+        help="the config file to load, paths are evaluated relative to the 'config/' directory",
+    )
+    parser.add_argument(
+        "--dataset",
+        "-d",
+        help="a dataset to compare, defaults to all",
+    )
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default=default_output_dir,
+        help="the directory in which to store output files",
+    )
+    parser.add_argument(
+        "--table-format",
+        "-t",
+        default="fancy_grid",
+        help="the tabulate table format",
+    )
     parser.add_argument("--flush", action="store_true", help="flush file cache first")
-    parser.add_argument("--ci", action="store_true", help="activate ci mode")
+    # parser.add_argument("--ci", action="store_true", help="activate ci mode")
     parser.add_argument("cmd", nargs="*", help="when set, run this command and exit")
-    cli = parser.parse_args()
+    args = parser.parse_args()
 
-    # import the sync module
-    sys.path.insert(0, this_dir)
-    import sync
-
-    # sanitize and add some cli args
-    cli.config = os.path.join(sync_dir, "config", cli.config)
-    cli.cache_dir = os.path.join(cli.data_dir, "input_files")
-    cli.table_dir = os.path.join(cli.data_dir, "tables")
-    cli.plot_dir = os.path.join(cli.data_dir, "plots")
+    # sanitize and add some args
+    args.config = os.path.join(sync_dir, "config", args.config)
+    args.cache_dir = os.path.join(args.output_dir, "input_cache")
+    args.table_dir = os.path.join(args.output_dir, "tables")
+    args.plot_dir = os.path.join(args.output_dir, "plots")
 
     # make dirs
-    for d in [cli.cache_dir, cli.table_dir, cli.plot_dir]:
+    for d in [args.cache_dir, args.table_dir, args.plot_dir]:
         if not os.path.exists(d):
             os.makedirs(d)
 
+    return args
+
+
+def main() -> int:
+    print(colored("\ninteractive sync tool", "cyan", style="bright"))
+    print("(ctrl+d to exit)\n")
+
+    # get cli arguments
+    args = get_args()
+
     # create a config object
-    print("\nload configuration : {}".format(cli.config))
-    config = sync.config.Config.load(cli.config)
+    print(f"load configuration : {args.config}")
+    config = sync.config.Config.from_yaml(args.config)
+
+    # create the data loader
+    loader = sync.loader.DataLoader(config, args.cache_dir)
 
     # make certain strings from config global, i.e., accessible without quotes
     config_globals = config.get_globals()
     if config_globals:
-        print("global variables   : {}".format(", ".join(config_globals)))
+        print(f"global variables   : {','.join(config_globals)}")
         globals().update({g: g for g in config_globals})
 
-    # create the file cache
-    cache = sync.cache.Cache(cli, config)
+    # localize all sync tool methods
+    tools = sync.tools.Tools(args, config, loader)
+    tool_methods = tools.get_exposed_methods()
 
-    # preload all files
-    cache.load(flush=cli.flush, ci=cli.ci)
+    # flush and fetch files
+    if args.flush:
+        loader.flush()
+    loader.fetch()
 
-    # set tools globals
-    sync.tools.cli = cli
-    sync.tools.config = config
-    sync.tools.cache = cache
-
-    # import all tools into the local scope
-    from sync.tools import *
-
-    # usage helper
-    def usage(func=None):
+    # add a usage helper
+    def usage(func=None) -> None:
+        """
+        Prints usage information of a single *func* when given, or all sync tools otherwise.
+        """
+        if isinstance(func, str):
+            func = tool_methods.get(func)
         if func:
-            print_usage([func])
+            print_usage([func], margin=False)
         else:
-            print_usage([getattr(sync.tools, name) for name in sync.tools.__all__])
+            print_usage(list(tool_methods.values()))
+
+    tool_methods = {"usage": usage, **tool_methods}
+
+    # expose all methods
+    globals().update(tool_methods)
 
     # run the specified sync tool when a command is given, otherwise print usage information
-    if cli.cmd:
+    if args.cmd and (args.cmd[0] or len(args.cmd) > 1):
         # build the command
-        if len(cli.cmd) == 1 and re.match(r"^[a-zA-Z0-9_]+\(.*\)$", cli.cmd[0]):
+        if len(args.cmd) == 1 and re.match(r"^[a-zA-Z0-9_]+\(.*\)$", args.cmd[0]):
             # trivial case
-            cmd = cli.cmd[0]
+            cmd = args.cmd[0]
         else:
             # interpret the first value as a function name and the rest as arguments
-            cmd = "{}({})".format(cli.cmd[0], ", ".join(cli.cmd[1:]))
+            cmd = f"{args.cmd[0]}({', '.join(args.cmd[1:])})"
 
         # run it
-        print("running command    : {}\n".format(cmd))
+        print(f"running command    : {cmd}\n")
         exec(cmd)
         sys.exit()
     else:
         usage()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

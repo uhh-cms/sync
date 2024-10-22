@@ -4,97 +4,87 @@
 Simple helpers to access json or yaml configurations.
 """
 
+from __future__ import annotations
 
 __all__ = ["Config"]
 
-
+import os
+import pathlib
 import itertools
 
+import yaml
 
-class ForwardDict(object):
-
-    def __init__(self, *args, **kwargs):
-        super(ForwardDict, self).__init__()
-
-        self._data = dict(*args, **kwargs)
-
-    @property
-    def data(self):
-        return self._data
-
-    def __getitem__(self, item):
-        return self._data[item]
-
-    def __setitem__(self, item, value):
-        self._data[item] = value
-
-    def keys(self):
-        return self._data.keys()
-
-    def values(self):
-        return self._data.values()
-
-    def items(self):
-        return self._data.items()
-
-    def update(self, data):
-        self._data.update(data)
-
-    def clear(self):
-        self._data.clear()
+from sync.utils import DotDict
 
 
-class Config(ForwardDict):
+class Config(DotDict):
 
     @classmethod
-    def load(cls, path):
-        import oyaml
+    def from_yaml(cls, path: str | pathlib.Path) -> Config:
+        path = os.path.expandvars(os.path.expanduser(str(path)))
         with open(path, "rb") as f:
-            return cls(oyaml.load(f, Loader=oyaml.SafeLoader))
+            return cls(**yaml.safe_load(f))  # type: ignore[return-value]
 
     def __init__(self, *args, **kwargs):
-        super(Config, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # dataset names and group names should not contain spaces
         for dataset in self.get_datasets():
             if " " in dataset:
-                raise ValueError("datasets should not contain spaces: '{}'".format(dataset))
+                raise ValueError(f"datasets should not contain spaces: '{dataset}'")
         for group in self.get_groups():
             if " " in group:
-                raise ValueError("groups should not contain spaces: '{}'".format(group))
+                raise ValueError(f"groups should not contain spaces: '{group}'")
 
-    def get_globals(self):
-        g = []
+    def get_globals(self) -> list[str]:
+        return [
+            *self.get_datasets(),
+            *self.get_groups(),
+        ]
 
-        # dataset names
-        g.extend(self.get_datasets())
-
-        # group names
-        g.extend(self.get_groups())
-
-        return g
-
-    def get_datasets(self, group=None):
-        if group:
-            return [
-                dataset for dataset, data in self["datasets"].items()
-                if group in data["groups"]
-            ]
-        else:
+    def get_datasets(self, group: str | None = None) -> list[str]:
+        if group is None:
             return list(self["datasets"].keys())
 
-    def get_groups(self, dataset=None):
-        if dataset:
-            return list(self["datasets"][dataset]["groups"].keys())
-        else:
+        return [
+            dataset for dataset, data in self["datasets"].items()
+            if group in data["groups"]
+        ]
+
+    def get_groups(self, dataset: str | None = None) -> list[str]:
+        if dataset is None:
             return list(set(sum((self.get_groups(d) for d in self.get_datasets()), [])))
 
-    def _dataset_group_valid(self, dataset, group):
+        return list(self["datasets"][dataset]["groups"].keys())
+
+    def get_files(self, dataset: str, group: str) -> dict[str | int, str]:
+        files = self["datasets"][dataset]["groups"][group]["files"]
+        if isinstance(files, dict):
+            return files
+        if isinstance(files, list):
+            return dict(enumerate(files))
+        raise TypeError(f"field 'files' must be a mapping or sequence, got '{files}'")
+
+    def get_transformation(self, dataset: str, group: str) -> str | None:
+        data = self["datasets"][dataset]["groups"][group]
+        return data.get("transform") if isinstance(data, dict) else None
+
+    def get_variables(self) -> list[str]:
+        return self["variables"]
+
+    def get_categories(self) -> list[str]:
+        return self["categories"]
+
+    def _dataset_group_valid(self, dataset: str, group: str) -> bool:
         return dataset in self["datasets"] and group in self["datasets"][dataset]["groups"]
 
-    def get_dataset_group_combinations(self, dataset=None, group=None):
+    def get_dataset_group_combinations(
+        self,
+        dataset: str | list[str] | None = None,
+        group: str | list[str] | None = None,
+    ) -> list[tuple[str, str]]:
         # sanitize datasets
-        if not dataset:
+        if dataset is None:
             datasets = self.get_datasets()
         elif not isinstance(dataset, list):
             datasets = [dataset]
@@ -102,7 +92,7 @@ class Config(ForwardDict):
             datasets = list(dataset)
 
         # sanitize groups
-        if not group:
+        if group is None:
             groups = self.get_groups()
         elif not isinstance(group, list):
             groups = [group]
@@ -114,17 +104,3 @@ class Config(ForwardDict):
             (dataset, group) for dataset, group in itertools.product(datasets, groups)
             if self._dataset_group_valid(dataset, group)
         ]
-
-    def get_files(self, dataset, group):
-        data = self["datasets"][dataset]["groups"][group]
-        return data["files"] if isinstance(data, dict) else data
-
-    def get_transformation(self, dataset, group):
-        data = self["datasets"][dataset]["groups"][group]
-        return data.get("transform") if isinstance(data, dict) else None
-
-    def get_variables(self):
-        return self["variables"]
-
-    def get_categories(self):
-        return self["categories"]

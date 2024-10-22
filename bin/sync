@@ -1,16 +1,16 @@
 #!/bin/bash
 
 action() {
-    local this_file="$( [ ! -z "$ZSH_VERSION" ] && echo "${(%):-%x}" || echo "${BASH_SOURCE[0]}" )"
-    local this_dir="$( cd "$( dirname "$this_file" )" && pwd )"
-    local sync_dir="$( dirname "$this_dir" )"
+    local shell_is_zsh=$( [ -z "${ZSH_VERSION}" ] && echo "false" || echo "true" )
+    local this_file="$( ${shell_is_zsh} && echo "${(%):-%x}" || echo "${BASH_SOURCE[0]}" )"
+    local this_dir="$( cd "$( dirname "${this_file}" )" && pwd )"
 
     # use ipython when available, fallback to plain python
-    which ipython &> /dev/null
-    if [ "$?" = "0" ]; then
-        ( cd "$sync_dir" && ipython -i sync -- "$@" )
+    local has_ipython="$( command -v ipython >& /dev/null && echo "true" || echo "false" )"
+    if ${has_ipython}; then
+        ( cd "${sync_dir}" && ipython --no-confirm-exit --pprint --no-banner -i sync -- "$@" )
     else
-        ( cd "$sync_dir" && python -i sync "$@" )
+        ( cd "${sync_dir}" && python -i sync -- "$@" )
     fi
 }
 action "$@"

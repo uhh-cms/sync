@@ -4,6 +4,11 @@
 - Requires Python ≥ 3.9
 - Creates a venv and installs dependencies
 
+## TODOs
+
+- "files" can be sequence or mapping, define default transform
+-
+
 <!--
 # CMS HH → bb𝝉𝝉 synchronization
 

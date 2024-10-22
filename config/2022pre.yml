@@ -1,0 +1,37 @@
+datasets:
+  hh:
+    files:
+      - /store/mc/Run3Summer22NanoAODv12/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_LHEweights_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/50000/992697da-4a10-4435-b63a-413f6d33517e.root
+    test_events: [110001, 110002, 110003, 110004, 110005]
+    groups:
+      uhh:
+        files:
+          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/uhh.csv
+        transform: null
+      uzh:
+        files:
+          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/uzh.csv
+        transform: null
+
+categories:
+  all: ((channel_id >= -1))
+  mutau, OS: ((channel_id == 1) & (is_os == 1))
+  mutau, SS: ((channel_id == 1) & (is_os == 0))
+  etau, OS: ((channel_id == 2) & (is_os == 1))
+  etau, SS: ((channel_id == 2) & (is_os == 0))
+  tautau, OS: ((channel_id == 3) & (is_os == 1))
+  tautau, SS: ((channel_id == 4) & (is_os == 0))
+
+variables:
+  - event
+  - run
+  - lumi
+  - channel_id
+  - is_os
+  - jet1_pt
+  - jet1_eta
+  - jet1_phi
+  - lep1_pt
+  - lep1_eta
+  - lep1_phi
+  - lep1_charge
