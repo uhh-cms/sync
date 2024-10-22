@@ -39,6 +39,8 @@ def is_exposed(func: Callable) -> bool:
 
 class Tools(object):
 
+    missing = -999.9
+
     header_styles = {
         1: {"color": "cyan", "style": "bright"},
         2: {"color": "cyan"},
@@ -265,7 +267,11 @@ class Tools(object):
         *interactive* is *True*.
         """
         # select groups and variables
-        _groups = self.config.select_groups(groups)
+        _groups = (
+            self.config.get_groups(dataset)
+            if groups is None
+            else self.config.select_groups(groups)
+        )
         _variables = self.config.select_variables(variables)
 
         self._print_header(1, f"Common events for dataset {dataset} between {', '.join(_groups)}")
@@ -306,123 +312,140 @@ class Tools(object):
                         break
                     print("")
 
-    # TODO
-    # def compare_event(dataset, event=None, variables=None, interactive=True):
-    #     """
-    #     Compares *variables* of an *event* given by its id in a specific *dataset*. When *variables* is
-    #     *None*, the variables defined in the configuration are used. When *event* is *None*, all events
-    #     in that dataset compared. In case of multiple events, a prompt allows to either stop or continue
-    #     the comparison when *interactive* is *True*.
-    #     """
-    #     # get participating groups
-    #     groups = config.get_groups(dataset)
+    @expose
+    def compare_event(
+        self,
+        dataset: str,
+        event: int | None = None,
+        variables: str | None = None,
+        interactive: bool = True,
+    ) -> None:
+        """
+        Compares *variables* of an *event* given by its id in a specific *dataset*. When *variables*
+        is None*, the variables defined in the configuration are used. When *event* is *None*, all
+        events in that dataset compared. In case of multiple events, a prompt allows to either stop
+        or continue the comparison when *interactive* is *True*.
+        """
+        # select groups and variables
+        _groups = self.config.get_groups(dataset)
+        _variables = self.config.select_variables(variables)
 
-    #     # default variables
-    #     variables = get_variables(variables)
+        # default events
+        if not event:
+            _events = list(set.union(*(set(self.loader(dataset, g)["event"].values) for g in _groups)))
+        elif isinstance(event, list):
+            _events = list(event)
+        else:
+            _events = [event]
 
-    #     # default events
-    #     if not event:
-    #         events = list(set.union(*(set(cache.get(dataset, g)["event"].values) for g in groups)))
-    #     elif isinstance(event, list):
-    #         events = list(event)
-    #     else:
-    #         events = [event]
+        def compare(event: int) -> None:
+            self._print_header(1, f"Comparison of event {event} in dataset {dataset}")
 
-    #     def compare(event):
-    #         print("\n## Comparison of event {} in dataset {}\n".format(event, dataset))
+            selection = f"(event == {event})"
+            table = [[group] for group in _groups]
 
-    #         selection = "(event == {})".format(event)
-    #         table = [[group] for group in groups]
+            for group, row in zip(_groups, table):
+                df = self.loader(dataset, group)
+                idxs = df.eval(selection)
+                n = sum(idxs)
+                if n == 0:
+                    # fill some missing value
+                    row.extend(self.missing for _ in _variables)  # type: ignore[misc]
+                else:
+                    if n != 1:
+                        raise Exception(
+                            f"event {event} contained {n} times in dataset {dataset} of group "
+                            f"{group}",
+                        )
+                    for v in _variables:
+                        val = df[idxs][v].values[0]
+                        if isinstance(val, int) or val == -1:
+                            val = str(int(val))  # numpy-safe conversion
+                        row.append(val)
 
-    #         for group, row in zip(groups, table):
-    #             df = cache.get(dataset, group)
-    #             idxs = df.eval(selection)
-    #             n = sum(idxs)
-    #             if n == 0:
-    #                 # fill some missing value
-    #                 row.extend(MISSING for _ in variables)
-    #             else:
-    #                 if n != 1:
-    #                     raise Exception("event {} contained {} times in dataset {} of group {}".format(
-    #                         event, n, dataset, group))
-    #                 for v in variables:
-    #                     val = df[idxs][v].values[0]
-    #                     if isinstance(val, int) or val == -1:
-    #                         val = str(int(val))  # numpy-safe conversion
-    #                     row.append(val)
+            self._print_table(table, headers=["group"] + _variables, floatfmt=".4f")
 
-    #         print_table(table, headers=["group"] + list(variables), floatfmt=".4f")
+        # loop over events
+        for i, e in enumerate(_events):
+            compare(e)
+            if i < len(_events) - 1:
+                print("")
+                if interactive:
+                    next_event = _events[i + 1]
+                    inp = input(
+                        f"press enter to continue with next event ({next_event}) or any other key "
+                        "to stop: ",
+                    ).strip()
+                    if inp:
+                        break
 
-    #     # loop over events
-    #     for i, event in enumerate(events):
-    #         compare(event)
-    #         if i < len(events) - 1:
-    #             print("")
-    #             if interactive:
-    #                 next_event = events[i + 1]
-    #                 inp = raw_input("press enter to continue with next event ({}) or any other key to "
-    #                     "stop: ".format(next_event)).strip()
-    #                 if inp:
-    #                     break
+    @expose
+    def compare_variable(
+        self,
+        dataset: str,
+        variable: str,
+        group1: str,
+        group2: str,
+        epsilon: float = 1e-5,
+    ) -> None:
+        """
+        Compares a *variable* in a specific *dataset* between *group1* and *group2* and prints a
+        table showing variable values in differing events, i.e., in events where the relative
+        difference exceeds *epsilon*.
+        """
+        self._print_header(
+            1,
+            f"Compare variable {variable} in dataset {dataset} between {group1} and {group2}",
+        )
 
-    # def compare_variable(dataset, variable, group1, group2, epsilon=1e-5):
-    #     """
-    #     Compares a *variable* in a specific *dataset* between *group1* and *group2* and prints a table
-    #     showing variable values in differing events, i.e., in events where the relative difference
-    #     exceeds *epsilon*.
-    #     """
-    #     import numpy as np
+        df1 = self.loader(dataset, group1)[["event", variable]]
+        df2 = self.loader(dataset, group2)[["event", variable]]
 
-    #     print("## Compare variable {} in dataset {} between {} and {}\n".format(
-    #         variable, dataset, group1, group2))
+        # get common events
+        s1 = set(df1["event"].values)
+        s2 = set(df2["event"].values)
+        common_events = sorted(list(s1 & s2))
 
-    #     df1 = cache.get(dataset, group1)[["event", variable]]
-    #     df2 = cache.get(dataset, group2)[["event", variable]]
+        self._print_header(2, "Stats")
+        print(f"{group1}: {len(df1)} events")
+        print(f"{group2}: {len(df2)} events")
+        print(f"{group1} & {group2}: {len(common_events)} common events")
 
-    #     # get common events
-    #     s1 = set(df1["event"].values)
-    #     s2 = set(df2["event"].values)
-    #     common_events = sorted(list(s1 & s2))
-    #     print("### Stats\n")
-    #     print("{}: {} events".format(group1, len(df1)))
-    #     print("{}: {} events".format(group2, len(df2)))
-    #     print("{} & {}: {} events".format(group1, group2, len(common_events)))
+        # sort dataframes by event id column
+        df1 = df1.sort_values(by=["event"])
+        df2 = df2.sort_values(by=["event"])
 
-    #     # sort dataframes by event id column
-    #     df1 = df1.sort_values(by=["event"])
-    #     df2 = df2.sort_values(by=["event"])
+        # get arrays (event,variable) for common events
+        v1 = df1.values[np.isin(df1.values[:, 0], common_events)].astype(float)
+        v2 = df2.values[np.isin(df2.values[:, 0], common_events)].astype(float)
 
-    #     # get arrays (event,variable) for common events
-    #     v1 = df1.values[np.isin(df1.values[:, 0], common_events)].astype(float)
-    #     v2 = df2.values[np.isin(df2.values[:, 0], common_events)].astype(float)
+        # verify that event ids are identical
+        if not np.equal(v1[:, 0], v2[:, 0]).all():
+            raise Exception("event ids are misaligned, please debug")
 
-    #     # verify that event ids are identical
-    #     if not np.equal(v1[:, 0], v2[:, 0]).all():
-    #         raise Exception("event ids are misaligned, please debug")
+        # get variable difference
+        diff = v1[:, 1] - v2[:, 1]
+        reldiff = 2 * diff / (v1[:, 1] + v2[:, 1])
 
-    #     # get variable difference
-    #     diff = v1[:, 1] - v2[:, 1]
-    #     reldiff = 2 * diff / (v1[:, 1] + v2[:, 1])
+        # detect where relative differences exceed epsilon
+        idxs = abs(reldiff) > epsilon
 
-    #     # detect where relative differences exceed epsilon
-    #     idxs = abs(reldiff) > epsilon
+        if idxs.sum() == 0:
+            print("\nno differences found")
+            return
 
-    #     if idxs.sum() == 0:
-    #         print("\nno differences found")
-    #         return
+        self._print_header(2, f"Differences in {idxs.sum()} events")
+        print(f"variable: {variable}")
+        print(f"sigma   : {diff.std():.6f}")
 
-    #     print("\n### Differences in {} events\n".format(idxs.sum()))
-    #     print("Variable: {}".format(variable))
-    #     print("Sigma   : {:.6f}".format(diff.std()))
+        headers = ["event", group1, group2, f"{group1} - {group2}"]
+        table = []
+        for i, diverging in enumerate(idxs):
+            if not diverging:
+                continue
+            table.append([df1["event"][i], df1[variable][i], df2[variable][i], diff[i]])
 
-    #     headers = ["event", "{}".format(group1), "{}".format(group2), "{} - {}".format(group1, group2)]
-    #     table = []
-    #     for i, diverging in enumerate(idxs):
-    #         if not diverging:
-    #             continue
-    #         table.append([df1["event"][i], df1[variable][i], df2[variable][i], diff[i]])
-
-    #     print_table(table, headers=headers, floatfmt=".4f")
+        self._print_table(table, headers=headers, floatfmt=".4f")
 
     @expose
     def visualize_variable(

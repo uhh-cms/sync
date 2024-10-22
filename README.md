@@ -35,7 +35,6 @@ As an example, you can show the event yields per category (as defined in the con
 interactive sync tool
 (ctrl+d to exit)
 
-....
 ---------------------------------------------- Usage -----------------------------------------------
 
 usage(func=None) -> None
@@ -53,6 +52,17 @@ check_missing_events(dataset: str, group1: str, group2: str, variables: str | No
     table with specific *variables* per event. When *variables* is *None*, all variables defined
     in the configuration are used. In case of multiple events, a prompt allows to either stop or
     continue the comparison when *interactive* is *True*.
+
+compare_event(dataset: str, event: int | None = None, variables: str | None = None, interactive: bool = True) -> None
+    Compares *variables* of an *event* given by its id in a specific *dataset*. When *variables*
+    is None*, the variables defined in the configuration are used. When *event* is *None*, all
+    events in that dataset compared. In case of multiple events, a prompt allows to either stop
+    or continue the comparison when *interactive* is *True*.
+
+compare_variable(dataset: str, variable: str, group1: str, group2: str, epsilon: float = 1e-05) -> None
+    Compares a *variable* in a specific *dataset* between *group1* and *group2* and prints a
+    table showing variable values in differing events, i.e., in events where the relative
+    difference exceeds *epsilon*.
 
 compare_yields(dataset: str, group1: str, group2: str) -> None
     Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
