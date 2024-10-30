@@ -501,6 +501,115 @@ class Tools(object):
             for variable in _variables:
                 visualize(dataset, variable)
 
+    @expose
+    def draw_variable(
+        self,
+        dataset: str | None = None,
+        variable: str | None = None,
+        group: str = None,
+        bins: int = 20,
+    ) -> None:
+        """
+        Creates a histogram with number of *bins* also including a ratio relative to *group*.
+        The plot is created specific for a *dataset* and *variable* and saves it in the plot
+        directory. When *dataset* is *None*, all available datasets are used. When *variables* is
+        *None*, the variables defined in the configuration are used.
+        """
+        _datasets = self.config.select_datasets(dataset)
+        _variables = self.config.select_variables(variable)
+        _groups = sorted(self.config.get_groups(dataset))
+
+        def visualize(
+            dataset: str,
+            variable: str,
+            group: str,
+            bins: int | list[float] = bins,
+        ) -> None:
+            """
+            Helper function to load the groups data and draw the comparison.
+            """
+            variable_data = {}
+
+            # get data for all groups
+            for _group in _groups:
+                df = self.loader(dataset, _group)[["event", variable]].sort_values(by=["event"])
+                variable_data[_group] = df[variable].values.astype(float)
+
+            # draw the comparison
+            path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")
+            # show it when possible
+            draw_hist_with_ratio(
+                dataset=dataset,
+                variable=variable,
+                ref_group=group,
+                data=variable_data,
+                bins=bins,
+                path=path,
+            )
+            self._show_plot(path)
+
+        # loop over all datasets and variables
+        for dataset in _datasets:
+            for variable in _variables:
+                visualize(dataset, variable, group=group, bins=bins)
+
+
+def draw_hist_with_ratio(
+    dataset: str,
+    variable: str,
+    ref_group: str,
+    data: dict[str, np.ndarray],
+    bins: int,
+    path: str,
+) -> None:
+    import mplhep as hep
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    plt.style.use(hep.style.CMS)
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+
+    fig, ax = plt.subplots(2, 1, gridspec_kw=dict(height_ratios=[3, 1], hspace=0))
+
+    # plot main group
+    main_data = data.pop(ref_group)
+    main_variable_count, main_bin_edges, _ = ax[0].hist(
+        main_data,
+        bins=bins,
+        label=ref_group,
+        histtype="step",
+        color=colors[0],
+    )
+    main_bin_centers = (main_bin_edges[:-1] + main_bin_edges[1:]) / 2
+    ax[1].hlines(1.0, main_bin_edges[0], main_bin_edges[-1], linestyle="-", color=colors[0])
+    # plot rest of the groups
+    for group, color in zip(data.keys(), colors[1:]):
+        variable_count, _, _ = ax[0].hist(
+            data[group],
+            bins=main_bin_edges,
+            label=group,
+            histtype="step",
+            color=color,
+        )
+        # ratio plot relative to main group
+        ratio = variable_count / main_variable_count
+        ax[1].plot(main_bin_centers, ratio, label=group, linestyle="", marker="o", color=color)
+
+    # styling and labels
+    hep.cms.label("Private work", ax=ax[0], data=True)
+    handles, labels = ax[0].get_legend_handles_labels()
+
+    handles = [
+        Line2D([0], [0], color=polygon.get_edgecolor(), linestyle="-", linewidth=4)
+        for polygon in handles
+    ]
+    ax[0].legend(handles=handles, labels=labels, loc="upper right", title=f"Dataset: {dataset}")
+    ax[0].set_ylabel("Entries")
+    ax[1].set_ylim(0.25, 1.75)
+    ax[1].set_xlabel(variable)
+    ax[1].set_ylabel(f"Ratio to '{ref_group}'")
+
+    fig.savefig(path, dpi=120, bbox_inches="tight")
+
 
 def draw_variable_comparison(
     dataset: str,
