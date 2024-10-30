@@ -685,7 +685,6 @@ def draw_variable_comparison(
         color = "green" if (abs(_diffs) <= epsilon).all() else "red"
 
         # compute a weight for the edge between 1 and 10, based on a projection into a single value
-        # see https://www.wolframalpha.com/input/?i=plot+10+*+tanh%28x+*+2%29+for+x%3D0+to+1.
         diff = abs(_diffs).mean()
         min_width, max_width, scale = 2, 10, 0.75
         weight = (
@@ -694,7 +693,6 @@ def draw_variable_comparison(
             else (min_width + (max_width - min_width) * math.tanh(diff * scale))
         )
 
-        # from IPython import embed; embed(header="diffs")
         nx.draw_networkx_edges(
             graph,
             node_pos,
