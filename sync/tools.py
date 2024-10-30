@@ -516,7 +516,6 @@ class Tools(object):
         directory. When *dataset* is *None*, all available datasets are used. When *variables* is
         *None*, the variables defined in the configuration are used.
         """
-
         _datasets = self.config.select_datasets(dataset)
         _variables = self.config.select_variables(variable)
         _groups = sorted(self.config.get_groups(dataset))
@@ -527,7 +526,9 @@ class Tools(object):
             group: str,
             bins: int | list[float] = bins,
         ) -> None:
-            """Helper function to load the groups data and draw the comparison."""
+            """
+            Helper function to load the groups data and draw the comparison.
+            """
             variable_data = {}
 
             # get data for all groups
@@ -554,7 +555,14 @@ class Tools(object):
                 visualize(dataset, variable, group=group, bins=bins)
 
 
-def draw_ratio(dataset, variable, group, data, bins, path):
+def draw_ratio(
+    dataset: str,
+    variable: str,
+    group: str,
+    data: dict[str, np.ndarray],
+    bins: int,
+    path: str,
+) -> None:
     import mplhep as hep
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
@@ -568,7 +576,7 @@ def draw_ratio(dataset, variable, group, data, bins, path):
     main_variable_count, main_bin_edges, _ = ax[0].hist(
         main_data,
         bins=bins,
-        label=group + "*",
+        label=f"{group}*",
         histtype="step",
         color=colors[0],
     )
@@ -593,7 +601,8 @@ def draw_ratio(dataset, variable, group, data, bins, path):
 
     handles = [
         Line2D([0], [0], color=polygon.get_edgecolor(), linestyle="-", linewidth=4)
-        for polygon in handles]
+        for polygon in handles
+    ]
     ax[0].legend(handles=handles, labels=labels, loc="upper right", title=f"Dataset: {dataset}")
     ax[0].set_ylabel("Entries")
     ax[1].set_ylim(0.5, 1.5)
