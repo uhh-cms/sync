@@ -41,18 +41,29 @@ interactive sync tool
 usage(func=None) -> None
     Prints usage information of a single *func* when given, or all sync tools otherwise.
 
-check_common_events(dataset: str, groups: str | None = None, variables: str | None = None, interactive: bool = True) -> None
-    Traverses events in a *dataset* that are common to all *groups* and prints a table with
-    specific *variables* per event. When *groups* is *None*, all participating groups are
-    selected. When *variables* is *None*, the variables defined in the configuration are used.
-    In case of multiple events, a prompt allows to either stop or continue the comparison when
-    *interactive* is *True*.
+print_config() -> None
+    Prints a summary of the current configuration.
+
+show_yields(dataset: str | None = None) -> None
+    Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
+    evaluated sequentially.
+
+compare_yields(dataset: str, group1: str, group2: str) -> None
+    Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
+    all known categories.
 
 check_missing_events(dataset: str, group1: str, group2: str, variables: str | None = None, interactive: bool = True) -> None
     Traverses missing events between *group1* and *group2* in a specific *dataset* and prints a
     table with specific *variables* per event. When *variables* is *None*, all variables defined
     in the configuration are used. In case of multiple events, a prompt allows to either stop or
     continue the comparison when *interactive* is *True*.
+
+check_common_events(dataset: str, groups: str | None = None, variables: str | None = None, interactive: bool = True) -> None
+    Traverses events in a *dataset* that are common to all *groups* and prints a table with
+    specific *variables* per event. When *groups* is *None*, all participating groups are
+    selected. When *variables* is *None*, the variables defined in the configuration are used.
+    In case of multiple events, a prompt allows to either stop or continue the comparison when
+    *interactive* is *True*.
 
 compare_event(dataset: str, event: int | None = None, variables: str | None = None, interactive: bool = True) -> None
     Compares *variables* of an *event* given by its id in a specific *dataset*. When *variables*
@@ -65,27 +76,16 @@ compare_variable(dataset: str, variable: str, group1: str, group2: str, epsilon:
     table showing variable values in differing events, i.e., in events where the relative
     difference exceeds *epsilon*.
 
-compare_yields(dataset: str, group1: str, group2: str) -> None
-    Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
-    all known categories.
-
-draw_variable(dataset: str | None = None, variable: str | None = None, group: str = None, bins: int = 20) -> None
+draw_variable(dataset: str | None = None, variable: str | None = None, group: str | None = None, bins: int = 20) -> None
     Creates a histogram with number of *bins* also including a ratio relative to *group*.
     The plot is created specific for a *dataset* and *variable* and saves it in the plot
     directory. When *dataset* is *None*, all available datasets are used. When *variables* is
     *None*, the variables defined in the configuration are used.
 
-print_config() -> None
-    Prints a summary of the current configuration.
-
-show_yields(dataset: str | None = None) -> None
-    Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
-    evaluated sequentially.
-
-visualize_variable(dataset: str | None = None, variables: str | None = None, epsilon: float = 1e-05) -> None
-    Creates a visualization for a specific *dataset* and *variables* and saves it in the plot
-    directory. When *dataset* is *None*, all available datasets are used. When *variables* is
-    *None*, the variables defined in the configuration are used.
+draw_variance(dataset: str | None = None, variables: str | None = None, epsilon: float = 1e-05) -> None
+    Creates a visualization of the variance for a specific *dataset* and *variables* and saves
+    it in the plot directory. When *dataset* is *None*, all available datasets are used. When
+    *variables* is *None*, the variables defined in the configuration are used.
 
 ----------------------------------------------------------------------------------------------------
 

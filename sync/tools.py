@@ -28,13 +28,18 @@ from sync.utils import colored
 from sync._types import Callable
 
 
+_expose_counter = 0
+
+
 def expose(func: Callable) -> Callable:
-    func._exposed = True  # type: ignore[attr-defined]
+    global _expose_counter
+    func._exposed = _expose_counter  # type: ignore[attr-defined]
+    _expose_counter += 1
     return func
 
 
 def is_exposed(func: Callable) -> bool:
-    return getattr(func, "_exposed", False)
+    return isinstance(getattr(func, "_exposed", None), int)
 
 
 class Tools(object):
@@ -55,11 +60,15 @@ class Tools(object):
         self.loader = loader
 
     def get_exposed_methods(self) -> dict[str, Callable]:
-        return {
-            name: getattr(self, name)
+        methods = [
+            (name, getattr(self, name))
             for name in dir(self)
             if is_exposed(getattr(self, name))
-        }
+        ]
+        # sort
+        methods.sort(key=lambda x: x[1]._exposed)
+        # convert to dict
+        return dict(methods)
 
     def _print_table(self, *args, **kwargs) -> None:
         kwargs.setdefault("tablefmt", self.args.table_format)
@@ -448,16 +457,71 @@ class Tools(object):
         self._print_table(table, headers=headers, floatfmt=".4f")
 
     @expose
-    def visualize_variable(
+    def draw_variable(
+        self,
+        dataset: str | None = None,
+        variable: str | None = None,
+        group: str | None = None,
+        bins: int = 20,
+    ) -> None:
+        """
+        Creates a histogram with number of *bins* also including a ratio relative to *group*.
+        The plot is created specific for a *dataset* and *variable* and saves it in the plot
+        directory. When *dataset* is *None*, all available datasets are used. When *variables* is
+        *None*, the variables defined in the configuration are used.
+        """
+        _datasets = self.config.select_datasets(dataset)
+        _variables = self.config.select_variables(variable)
+        _groups = sorted(self.config.get_groups(dataset))
+
+        # default reference group
+        if group is None:
+            group = _groups[0]
+
+        def visualize(
+            dataset: str,
+            variable: str,
+            bins: int | list[float] = bins,
+        ) -> None:
+            """
+            Helper function to load the groups data and draw the comparison.
+            """
+            variable_data = {}
+
+            # get data for all groups
+            for _group in _groups:
+                df = self.loader(dataset, _group)[["event", variable]].sort_values(by=["event"])
+                variable_data[_group] = df[variable].values.astype(float)
+
+            # draw the comparison
+            path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")
+            # show it when possible
+            draw_hist_with_ratio(
+                dataset=dataset,
+                variable=variable,
+                ref_group=group,
+                data=variable_data,
+                bins=bins,
+                path=path,
+            )
+            self._show_plot(path)
+
+        # loop over all datasets and variables
+        for dataset in _datasets:
+            for variable in _variables:
+                visualize(dataset, variable, bins=bins)
+
+    @expose
+    def draw_variance(
         self,
         dataset: str | None = None,
         variables: str | None = None,
         epsilon: float = 1e-5,
     ) -> None:
         """
-        Creates a visualization for a specific *dataset* and *variables* and saves it in the plot
-        directory. When *dataset* is *None*, all available datasets are used. When *variables* is
-        *None*, the variables defined in the configuration are used.
+        Creates a visualization of the variance for a specific *dataset* and *variables* and saves
+        it in the plot directory. When *dataset* is *None*, all available datasets are used. When
+        *variables* is *None*, the variables defined in the configuration are used.
         """
         # select datasets and variables
         _datasets = self.config.select_datasets(dataset)
@@ -501,68 +565,16 @@ class Tools(object):
             for variable in _variables:
                 visualize(dataset, variable)
 
-    @expose
-    def draw_variable(
-        self,
-        dataset: str | None = None,
-        variable: str | None = None,
-        group: str = None,
-        bins: int = 20,
-    ) -> None:
-        """
-        Creates a histogram with number of *bins* also including a ratio relative to *group*.
-        The plot is created specific for a *dataset* and *variable* and saves it in the plot
-        directory. When *dataset* is *None*, all available datasets are used. When *variables* is
-        *None*, the variables defined in the configuration are used.
-        """
-        _datasets = self.config.select_datasets(dataset)
-        _variables = self.config.select_variables(variable)
-        _groups = sorted(self.config.get_groups(dataset))
-
-        def visualize(
-            dataset: str,
-            variable: str,
-            group: str,
-            bins: int | list[float] = bins,
-        ) -> None:
-            """
-            Helper function to load the groups data and draw the comparison.
-            """
-            variable_data = {}
-
-            # get data for all groups
-            for _group in _groups:
-                df = self.loader(dataset, _group)[["event", variable]].sort_values(by=["event"])
-                variable_data[_group] = df[variable].values.astype(float)
-
-            # draw the comparison
-            path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")
-            # show it when possible
-            draw_hist_with_ratio(
-                dataset=dataset,
-                variable=variable,
-                ref_group=group,
-                data=variable_data,
-                bins=bins,
-                path=path,
-            )
-            self._show_plot(path)
-
-        # loop over all datasets and variables
-        for dataset in _datasets:
-            for variable in _variables:
-                visualize(dataset, variable, group=group, bins=bins)
-
 
 def draw_hist_with_ratio(
     dataset: str,
     variable: str,
     ref_group: str,
     data: dict[str, np.ndarray],
-    bins: int,
+    bins: int | list[float],
     path: str,
 ) -> None:
-    import mplhep as hep
+    import mplhep as hep  # type: ignore[import-untyped]
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     plt.style.use(hep.style.CMS)
@@ -669,22 +681,27 @@ def draw_variable_comparison(
 
     # add edges, based on differences
     for (group1, group2), _diffs in diffs.items():
-        # compile the differences into a single value
-        # method 1: take the absolute variance of non-zero values
-        idxs = _diffs != 0
-        diff = abs(_diffs[_diffs != 0].var()) if idxs.any() else 0.0
-        # method 2: take the std of non-zero values
-        # diff = _diffs[_diffs != 0].std() if idxs.any() else 0.
+        # the comparison is only deemed successful if all differences are below epsilon
+        color = "green" if (abs(_diffs) <= epsilon).all() else "red"
 
-        # define a line weight between 1 and 10 by using an activation-like approach
+        # compute a weight for the edge between 1 and 10, based on a projection into a single value
         # see https://www.wolframalpha.com/input/?i=plot+10+*+tanh%28x+*+2%29+for+x%3D0+to+1.
-        weight = 2 if diff <= epsilon else max(1, 10 * math.tanh(diff * 2))
+        diff = abs(_diffs).mean()
+        min_width, max_width, scale = 2, 10, 0.75
+        weight = (
+            min_width
+            if diff <= epsilon
+            else (min_width + (max_width - min_width) * math.tanh(diff * scale))
+        )
 
-        # define a line color
-        color = "green" if diff <= epsilon else "red"
-
-        nx.draw_networkx_edges(graph, node_pos, [(groups.index(group1), groups.index(group2))],
-            width=weight, edge_color=color)
+        # from IPython import embed; embed(header="diffs")
+        nx.draw_networkx_edges(
+            graph,
+            node_pos,
+            [(groups.index(group1), groups.index(group2))],
+            width=weight,
+            edge_color=color,
+        )
 
     # save it
     print(f"save comparison plot of variable {variable} in dataset {dataset} at {path}")
