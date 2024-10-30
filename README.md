@@ -25,9 +25,10 @@ Add `--help` to see all possible arguments.
 In general, the tool starts an interactive IPython or Python shell, prints some usage information at startup and waits for input.
 
 The first time you start the tool, it will copy or download the synchronization files of all groups defined by in the configuration file set by `--config FILE` (defaults to [config/2022pre.yml](config/2022pre.yml)).
-If you want to reload the files the next time you start the tool, add `--flush`.
 
-As an example, you can show the event yields per category (as defined in the config) and participating group in a certain dataset as demonstrated below.
+> If you want to reload the files the next time you start the tool, add `--flush`.
+
+As an example, you can show the event yields per category (as defined in the config) and participating groups in a certain dataset as demonstrated below.
 
 ```shell
 > sync
