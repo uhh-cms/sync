@@ -68,6 +68,12 @@ compare_yields(dataset: str, group1: str, group2: str) -> None
     Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
     all known categories.
 
+draw_variable(dataset: str | None = None, variable: str | None = None, group: str = None, bins: int = 20) -> None
+    Creates a histogram with number of *bins* also including a ratio relative to *group*.
+    The plot is created specific for a *dataset* and *variable* and saves it in the plot
+    directory. When *dataset* is *None*, all available datasets are used. When *variables* is
+    *None*, the variables defined in the configuration are used.
+
 print_config() -> None
     Prints a summary of the current configuration.
 

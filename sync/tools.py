@@ -502,12 +502,11 @@ class Tools(object):
                 visualize(dataset, variable)
 
     @expose
-    def visualize_ratios(
+    def draw_variable(
         self,
         dataset: str | None = None,
         variable: str | None = None,
         group: str = None,
-        epsilon: float = 1e-5,
         bins: int = 20,
     ) -> None:
         """
@@ -539,10 +538,10 @@ class Tools(object):
             # draw the comparison
             path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")
             # show it when possible
-            draw_ratio(
+            draw_hist_with_ratio(
                 dataset=dataset,
                 variable=variable,
-                group=group,
+                ref_group=group,
                 data=variable_data,
                 bins=bins,
                 path=path,
@@ -555,10 +554,10 @@ class Tools(object):
                 visualize(dataset, variable, group=group, bins=bins)
 
 
-def draw_ratio(
+def draw_hist_with_ratio(
     dataset: str,
     variable: str,
-    group: str,
+    ref_group: str,
     data: dict[str, np.ndarray],
     bins: int,
     path: str,
@@ -572,15 +571,16 @@ def draw_ratio(
     fig, ax = plt.subplots(2, 1, gridspec_kw=dict(height_ratios=[3, 1], hspace=0))
 
     # plot main group
-    main_data = data.pop(group)
+    main_data = data.pop(ref_group)
     main_variable_count, main_bin_edges, _ = ax[0].hist(
         main_data,
         bins=bins,
-        label=f"{group}*",
+        label=ref_group,
         histtype="step",
         color=colors[0],
     )
     main_bin_centers = (main_bin_edges[:-1] + main_bin_edges[1:]) / 2
+    ax[1].hlines(1.0, main_bin_edges[0], main_bin_edges[-1], linestyle="-", color=colors[0])
     # plot rest of the groups
     for group, color in zip(data.keys(), colors[1:]):
         variable_count, _, _ = ax[0].hist(
@@ -593,10 +593,9 @@ def draw_ratio(
         # ratio plot relative to main group
         ratio = variable_count / main_variable_count
         ax[1].plot(main_bin_centers, ratio, label=group, linestyle="", marker="o", color=color)
-    ax[1].hlines(1.0, main_bin_edges[0], main_bin_edges[-1], linestyle="-", color=colors[0])
 
     # styling and labels
-    hep.cms.label("Private work", ax=ax[0])
+    hep.cms.label("Private work", ax=ax[0], data=True)
     handles, labels = ax[0].get_legend_handles_labels()
 
     handles = [
@@ -605,9 +604,9 @@ def draw_ratio(
     ]
     ax[0].legend(handles=handles, labels=labels, loc="upper right", title=f"Dataset: {dataset}")
     ax[0].set_ylabel("Entries")
-    ax[1].set_ylim(0.5, 1.5)
+    ax[1].set_ylim(0.25, 1.75)
     ax[1].set_xlabel(variable)
-    ax[1].set_ylabel("Ratio")
+    ax[1].set_ylabel(f"Ratio to '{ref_group}'")
 
     fig.savefig(path, dpi=120, bbox_inches="tight")
 
