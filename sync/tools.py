@@ -463,6 +463,7 @@ class Tools(object):
         variable: str | None = None,
         group: str | None = None,
         bins: int = 20,
+        normalize: bool = True,
     ) -> None:
         """
         Creates a histogram with number of *bins* also including a ratio relative to *group*.
@@ -503,6 +504,7 @@ class Tools(object):
                 data=variable_data,
                 bins=bins,
                 path=path,
+                normalize=normalize,
             )
             self._show_plot(path)
 
@@ -573,6 +575,7 @@ def draw_hist_with_ratio(
     data: dict[str, np.ndarray],
     bins: int | list[float],
     path: str,
+    normalize: bool,
 ) -> None:
     import mplhep as hep  # type: ignore[import-untyped]
     import matplotlib.pyplot as plt
@@ -590,6 +593,7 @@ def draw_hist_with_ratio(
         label=ref_group,
         histtype="step",
         color=colors[0],
+        density=normalize,
     )
     main_bin_centers = (main_bin_edges[:-1] + main_bin_edges[1:]) / 2
     ax[1].hlines(1.0, main_bin_edges[0], main_bin_edges[-1], linestyle="-", color=colors[0])
@@ -601,6 +605,7 @@ def draw_hist_with_ratio(
             label=group,
             histtype="step",
             color=color,
+            density=normalize,
         )
         # ratio plot relative to main group
         ratio = variable_count / main_variable_count
@@ -615,7 +620,10 @@ def draw_hist_with_ratio(
         for polygon in handles
     ]
     ax[0].legend(handles=handles, labels=labels, loc="upper right", title=f"Dataset: {dataset}")
-    ax[0].set_ylabel("Entries")
+    if normalize:
+        ax[0].set_ylabel("Normalized entries", size=20)
+    else:
+        ax[0].set_ylabel("Entries", size=20)
     ax[1].set_ylim(0.25, 1.75)
     ax[1].set_xlabel(variable)
     ax[1].set_ylabel(f"Ratio to '{ref_group}'")
