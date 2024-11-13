@@ -114,6 +114,8 @@ class Config(DotDict):
                 if d not in selected_variables and fnmatch.fnmatch(d, pattern):
                     selected_variables.append(d)
 
+        if not selected_variables:
+            raise ValueError(f"no variables matched '{variable}'")
         return selected_variables
 
     def get_categories(self) -> dict[str, str]:
