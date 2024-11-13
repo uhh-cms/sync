@@ -65,6 +65,7 @@ class Config(DotDict):
                 if d not in selected_datasets and fnmatch.fnmatch(d, pattern):
                     selected_datasets.append(d)
 
+        self.raise_no_match(selected_datasets, dataset, "datasets")
         return selected_datasets
 
     def get_groups(self, dataset: str | None = None) -> list[str]:
@@ -85,7 +86,12 @@ class Config(DotDict):
                 if d not in selected_groups and fnmatch.fnmatch(d, pattern):
                     selected_groups.append(d)
 
+        self.raise_no_match(selected_groups, group, "groups")
         return selected_groups
+
+    def raise_no_match(self, selected_var: list[str], var: str, var_str: str) -> bool:
+        if not selected_var:
+            raise ValueError(f"no {var_str} matched given '{var}'")
 
     def get_files(self, dataset: str, group: str) -> dict[str | int, str]:
         files = self["datasets"][dataset]["groups"][group]["files"]
@@ -104,7 +110,6 @@ class Config(DotDict):
 
     def select_variables(self, variable: str | list[str] | None = None) -> list[str]:
         all_variables = self.get_variables()
-
         if variable is None:
             return all_variables
 
@@ -114,8 +119,7 @@ class Config(DotDict):
                 if d not in selected_variables and fnmatch.fnmatch(d, pattern):
                     selected_variables.append(d)
 
-        if not selected_variables:
-            raise ValueError(f"no variables matched '{variable}'")
+        self.raise_no_match(selected_variables, variable, "variables")
         return selected_variables
 
     def get_categories(self) -> dict[str, str]:
