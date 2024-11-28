@@ -452,7 +452,7 @@ class Tools(object):
         for i, diverging in enumerate(idxs):
             if not diverging:
                 continue
-            table.append([df1["event"][i], df1[variable][i], df2[variable][i], diff[i]])
+            table.append([df1["event"][i], v1[variable][i], v2[variable][i], diff[i]])
 
         self._print_table(table, headers=headers, floatfmt=".4f")
 
