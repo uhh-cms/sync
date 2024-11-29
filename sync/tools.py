@@ -407,13 +407,14 @@ class Tools(object):
             f"Compare variable {variable} in dataset {dataset} between {group1} and {group2}",
         )
 
-        df1 = self.loader(dataset, group1)[["event", variable]]
-        df2 = self.loader(dataset, group2)[["event", variable]]
+        # load data into pandas dataframes
+        df1 = self.loader(dataset, group1)[["event", "run", "lumi", variable]]
+        df2 = self.loader(dataset, group2)[["event", "run", "lumi", variable]]
 
-        # get common events
-        s1 = set(df1["event"].values)
-        s2 = set(df2["event"].values)
-        common_events = sorted(list(s1 & s2))
+        # get common events in both pandas dataframes
+        suffixes = ["_x", "_y"]
+        variables = [f"{variable}{suffix}" for suffix in suffixes]
+        common_events = df1.merge(df2, how="inner", on=["event", "run", "lumi"], suffixes=suffixes)
 
         self._print_header(2, "Stats")
         print(f"{group1}: {len(df1)} events")
@@ -421,20 +422,12 @@ class Tools(object):
         print(f"{group1} & {group2}: {len(common_events)} common events")
 
         # sort dataframes by event id column
-        df1 = df1.sort_values(by=["event"])
-        df2 = df2.sort_values(by=["event"])
+        common_events.sort_values(by=["event"])
 
-        # get arrays (event,variable) for common events
-        v1 = df1.values[np.isin(df1.values[:, 0], common_events)].astype(float)
-        v2 = df2.values[np.isin(df2.values[:, 0], common_events)].astype(float)
-
-        # verify that event ids are identical
-        if not np.equal(v1[:, 0], v2[:, 0]).all():
-            raise Exception("event ids are misaligned, please debug")
-
-        # get variable difference
-        diff = v1[:, 1] - v2[:, 1]
-        reldiff = 2 * diff / (v1[:, 1] + v2[:, 1])
+        # get variable difference and relative difference, std deviation
+        common_events["difference"] = common_events[variables[0]] - common_events[variables[1]]
+        reldiff = 2 * common_events["difference"] / (common_events[variables[0]] + common_events[variables[1]])
+        std = common_events["difference"].std()
 
         # detect where relative differences exceed epsilon
         idxs = abs(reldiff) > epsilon
@@ -445,15 +438,19 @@ class Tools(object):
 
         self._print_header(2, f"Differences in {idxs.sum()} events")
         print(f"variable: {variable}")
-        print(f"sigma   : {diff.std():.6f}")
+        print(f"sigma   : {std:.6f}")
 
         headers = ["event", group1, group2, f"{group1} - {group2}"]
         table = []
         for i, diverging in enumerate(idxs):
             if not diverging:
                 continue
-            table.append([df1["event"][i], df1[variable][i], df2[variable][i], diff[i]])
-
+            table.append([
+                common_events["event"][i],
+                common_events[variables[0]][i],
+                common_events[variables[1]][i],
+                common_events["difference"][i],
+            ])
         self._print_table(table, headers=headers, floatfmt=".4f")
 
     @expose
@@ -575,6 +572,7 @@ def draw_hist_with_ratio(
     data: dict[str, np.ndarray],
     bins: int | list[float],
     path: str,
+    *,
     normalize: bool,
 ) -> None:
     import mplhep as hep  # type: ignore[import-untyped]
@@ -625,8 +623,8 @@ def draw_hist_with_ratio(
     else:
         ax[0].set_ylabel("Entries", size=20)
     ax[1].set_ylim(0.25, 1.75)
-    ax[1].set_xlabel(variable)
-    ax[1].set_ylabel(f"Ratio to '{ref_group}'")
+    ax[1].set_xlabel(variable, size=20)
+    ax[1].set_ylabel(f"Ratio to '{ref_group}'", size=20)
 
     fig.savefig(path, dpi=120, bbox_inches="tight")
 
