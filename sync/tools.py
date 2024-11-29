@@ -449,7 +449,8 @@ class Tools(object):
                 common_events["event"][i],
                 common_events[variables[0]][i],
                 common_events[variables[1]][i],
-                common_events["difference"][i]])
+                common_events["difference"][i],
+            ])
         self._print_table(table, headers=headers, floatfmt=".4f")
 
     @expose
