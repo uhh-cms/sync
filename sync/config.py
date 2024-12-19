@@ -89,7 +89,12 @@ class Config(DotDict):
         self.raise_no_match(selected_groups, group, "groups")
         return selected_groups
 
-    def raise_no_match(self, selected_var: list[str], var: str, var_str: str) -> bool:
+    def raise_no_match(
+        self,
+        selected_var: list[str],
+        var: str | list[str] | None,
+        var_str: str,
+    ) -> None:
         if not selected_var:
             raise ValueError(f"no {var_str} matched given '{var}'")
 
