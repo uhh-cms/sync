@@ -512,6 +512,7 @@ class Tools(object):
                     for g in {ref_group, *_groups}
                 },
             )
+            print(f"created plot at {path}")
             self._show_plot(path)
 
         # loop over all datasets and variables
@@ -565,8 +566,7 @@ class Tools(object):
                 path=path,
                 epsilon=epsilon,
             )
-
-            # show it when possible
+            print(f"created plot at {path}")
             self._show_plot(path)
 
         # loop over all datasets and variables
