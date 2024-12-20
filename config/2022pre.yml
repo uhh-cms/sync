@@ -55,19 +55,11 @@ variables:
   - met_pt
   - met_phi
   # FatJet
-  - fatjet1_eta
-  - fatjet1_mass
-  - fatjet1_phi
   - fatjet1_pt
-  - fatjet1_tau1
-  - fatjet1_tau2
-  - fatjet1_tau3
-  - fatjet1_tau4
-  - fatjet2_eta
-  - fatjet2_mass
-  - fatjet2_phi
+  - fatjet1_eta
+  - fatjet1_phi
+  - fatjet1_mass
   - fatjet2_pt
-  - fatjet2_tau1
-  - fatjet2_tau2
-  - fatjet2_tau3
-  - fatjet2_tau4
+  - fatjet2_eta
+  - fatjet2_phi
+  - fatjet2_mass
