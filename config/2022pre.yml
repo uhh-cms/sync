@@ -31,15 +31,18 @@ variables:
   - lumi
   - channel_id
   - os
+  - deterministic_seed
   # Jets
   - jet1_pt
   - jet1_eta
   - jet1_phi
   - jet1_mass
+  - jet1_deterministic_seed
   - jet2_pt
   - jet2_eta
   - jet2_phi
   - jet2_mass
+  - jet2_deterministic_seed
   # Lepton
   - lep1_pt
   - lep1_eta
