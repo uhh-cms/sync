@@ -74,8 +74,12 @@ class Config(DotDict):
 
         return list(self["datasets"][dataset]["groups"].keys())
 
-    def select_groups(self, group: str | list[str] | None = None) -> list[str]:
-        all_groups = self.get_groups()
+    def select_groups(
+        self,
+        group: str | list[str] | None = None,
+        dataset: str | None = None,
+    ) -> list[str]:
+        all_groups = self.get_groups(dataset=dataset)
 
         if group is None:
             return all_groups
@@ -159,3 +163,9 @@ class Config(DotDict):
             (dataset, group) for dataset, group in itertools.product(datasets, groups)
             if self._dataset_group_valid(dataset, group)
         ]
+
+    def get_missing_value(self, dataset: str, group: str) -> float | None:
+        group_data = self["datasets"][dataset]["groups"][group]
+        if "missing_value" not in group_data:
+            return None
+        return float(group_data["missing_value"])

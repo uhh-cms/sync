@@ -44,7 +44,7 @@ def is_exposed(func: Callable) -> bool:
 
 class Tools(object):
 
-    missing = -999.9
+    missing_value = -999.0
 
     header_styles = {
         1: {"color": "cyan", "style": "bright"},
@@ -83,6 +83,10 @@ class Tools(object):
             return
 
         subprocess.run(f"{self.args.view_cmd} '{path}'", shell=True, executable="/bin/bash")
+
+    def _get_missing_value(self, dataset: str, group: str) -> float:
+        missing = self.config.get_missing_value(dataset, group)
+        return missing if missing is not None else self.missing_value
 
     @expose
     def print_config(self) -> None:
@@ -354,12 +358,13 @@ class Tools(object):
             table = [[group] for group in _groups]
 
             for group, row in zip(_groups, table):
+                missing_value = self._get_missing_value(dataset, group)
                 df = self.loader(dataset, group)
                 idxs = df.eval(selection)
                 n = sum(idxs)
                 if n == 0:
                     # fill some missing value
-                    row.extend(self.missing for _ in _variables)  # type: ignore[misc]
+                    row.extend(missing_value for _ in _variables)  # type: ignore[misc]
                 else:
                     if n != 1:
                         raise Exception(
@@ -458,12 +463,12 @@ class Tools(object):
         self,
         dataset: str | None = None,
         variable: str | None = None,
-        group: str | None = None,
+        ref_group: str | None = None,
         bins: int = 20,
-        normalize: bool = True,
+        normalize: bool = False,
     ) -> None:
         """
-        Creates a histogram with number of *bins* also including a ratio relative to *group*.
+        Creates a histogram with number of *bins* also including a ratio relative to *ref_group*.
         The plot is created specific for a *dataset* and *variable* and saves it in the plot
         directory. When *dataset* is *None*, all available datasets are used. When *variables* is
         *None*, the variables defined in the configuration are used.
@@ -473,8 +478,8 @@ class Tools(object):
         _groups = sorted(self.config.get_groups(dataset))
 
         # default reference group
-        if group is None:
-            group = _groups[0]
+        if ref_group is None:
+            ref_group = _groups[0]
 
         def visualize(
             dataset: str,
@@ -497,11 +502,15 @@ class Tools(object):
             draw_hist_with_ratio(
                 dataset=dataset,
                 variable=variable,
-                ref_group=group,
+                ref_group=ref_group,
                 data=variable_data,
                 bins=bins,
                 path=path,
                 normalize=normalize,
+                missing_values={
+                    g: self._get_missing_value(dataset, g)
+                    for g in {ref_group, *_groups}
+                },
             )
             self._show_plot(path)
 
@@ -549,7 +558,13 @@ class Tools(object):
 
             # draw the comparison
             path = os.path.join(self.args.plot_dir, f"comparison__{dataset}__{variable}.png")
-            draw_variable_comparison(dataset, variable, diffs, path, epsilon=epsilon)
+            draw_variable_comparison(
+                dataset=dataset,
+                variable=variable,
+                diffs=diffs,
+                path=path,
+                epsilon=epsilon,
+            )
 
             # show it when possible
             self._show_plot(path)
@@ -566,14 +581,15 @@ class Tools(object):
 
 
 def draw_hist_with_ratio(
+    *,
     dataset: str,
     variable: str,
     ref_group: str,
     data: dict[str, np.ndarray],
     bins: int | list[float],
     path: str,
-    *,
     normalize: bool,
+    missing_values: dict[str, float],
 ) -> None:
     import mplhep as hep  # type: ignore[import-untyped]
     import matplotlib.pyplot as plt
@@ -583,53 +599,67 @@ def draw_hist_with_ratio(
 
     fig, ax = plt.subplots(2, 1, gridspec_kw=dict(height_ratios=[3, 1], hspace=0))
 
-    # plot main group
-    main_data = data.pop(ref_group)
-    main_variable_count, main_bin_edges, _ = ax[0].hist(
-        main_data,
+    # plot reference group
+    ref_data = data.pop(ref_group)
+    ref_count, ref_edges, *_ = ax[0].hist(
+        ref_data[ref_data != missing_values[ref_group]],
         bins=bins,
         label=ref_group,
         histtype="step",
         color=colors[0],
         density=normalize,
+        linewidth=2,
     )
-    main_bin_centers = (main_bin_edges[:-1] + main_bin_edges[1:]) / 2
-    ax[1].hlines(1.0, main_bin_edges[0], main_bin_edges[-1], linestyle="-", color=colors[0])
+    ref_centers = (ref_edges[:-1] + ref_edges[1:]) / 2
+    ax[1].hlines(1.0, ref_edges[0], ref_edges[-1], linestyle="-", color=colors[0])
+
     # plot rest of the groups
     for group, color in zip(data.keys(), colors[1:]):
-        variable_count, _, _ = ax[0].hist(
+        count, *_ = ax[0].hist(
             data[group],
-            bins=main_bin_edges,
+            bins=ref_edges,
             label=group,
             histtype="step",
             color=color,
             density=normalize,
+            linewidth=2,
         )
         # ratio plot relative to main group
-        ratio = variable_count / main_variable_count
-        ax[1].plot(main_bin_centers, ratio, label=group, linestyle="", marker="o", color=color)
+        ratio = count / ref_count
+        ratio_err = ratio * (ref_count**-1 + count**-1)**0.5
+        ax[1].errorbar(
+            ref_centers,
+            ratio,
+            yerr=ratio_err,
+            label=group,
+            linestyle="",
+            marker="o",
+            color=color,
+        )
 
     # styling and labels
-    hep.cms.label("Private work", ax=ax[0], data=True)
+    hep.cms.label("Private work", ax=ax[0], data=False, com=13.6)
     handles, labels = ax[0].get_legend_handles_labels()
+    y_label_x_offset = -0.14 if normalize else -0.09
 
     handles = [
-        Line2D([0], [0], color=polygon.get_edgecolor(), linestyle="-", linewidth=4)
+        Line2D([0], [0], color=polygon.get_edgecolor(), linestyle="-", linewidth=3)
         for polygon in handles
     ]
     ax[0].legend(handles=handles, labels=labels, loc="upper right", title=f"Dataset: {dataset}")
-    if normalize:
-        ax[0].set_ylabel("Normalized entries", size=20)
-    else:
-        ax[0].set_ylabel("Entries", size=20)
-    ax[1].set_ylim(0.25, 1.75)
-    ax[1].set_xlabel(variable, size=20)
-    ax[1].set_ylabel(f"Ratio to '{ref_group}'", size=20)
+    ax[0].set_ylabel("Normalized entries" if normalize else "Entries")
+    ax[0].yaxis.set_label_coords(y_label_x_offset, 1.0)
+    ax[1].set_ylim(0.2, 1.8)
+    ax[1].set_xlabel(variable)
+    ax[1].set_ylabel(f"1 / {ref_group}", loc="center")
+    ax[1].yaxis.set_label_coords(y_label_x_offset, 0.5)
+    ax[1].grid(axis="y", linestyle="-", linewidth=1)
 
     fig.savefig(path, dpi=120, bbox_inches="tight")
 
 
 def draw_variable_comparison(
+    *,
     dataset: str,
     variable: str,
     diffs: dict[tuple[str, str], np.ndarray],

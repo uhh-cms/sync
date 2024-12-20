@@ -7,11 +7,13 @@ datasets:
       cf:
         files:
           - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0.csv
+        missing_value: -99999.0
         transform: null
       cclub:
         files:
           # TODO: change
           - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0.csv
+        missing_value: -99999.0
         transform: null
 
 categories:
@@ -84,8 +86,8 @@ variables:
   - tau2_phi
   - tau2_pt
   # MET
-  - met1_pt
-  - met1_phi
+  - met_pt
+  - met_phi
   # FatJet
   - fatjet1_eta
   - fatjet1_mass
