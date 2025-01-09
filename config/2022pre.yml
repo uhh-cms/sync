@@ -17,12 +17,18 @@ datasets:
 
 categories:
   all: ((channel_id >= -1))
-  mutau, OS: ((channel_id == 1) & (os == 1))
-  mutau, SS: ((channel_id == 1) & (os == 0))
-  etau, OS: ((channel_id == 2) & (os == 1))
-  etau, SS: ((channel_id == 2) & (os == 0))
+  etau, OS: ((channel_id == 1) & (os == 1))
+  etau, SS: ((channel_id == 1) & (os == 0))
+  mutau, OS: ((channel_id == 2) & (os == 1))
+  mutau, SS: ((channel_id == 2) & (os == 0))
   tautau, OS: ((channel_id == 3) & (os == 1))
-  tautau, SS: ((channel_id == 4) & (os == 0))
+  tautau, SS: ((channel_id == 3) & (os == 0))
+  ee, OS: ((channel_id == 4) & (os == 1))
+  ee, SS: ((channel_id == 4) & (os == 0))
+  mumu, OS: ((channel_id == 5) & (os == 1))
+  mumu, SS: ((channel_id == 5) & (os == 0))
+  emu, OS: ((channel_id == 6) & (os == 1))
+  emu, SS: ((channel_id == 6) & (os == 0))
 
 variables:
   # Event
