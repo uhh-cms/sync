@@ -6,14 +6,14 @@ datasets:
       cf:
         files:
           - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v2.csv
-        missing_value: -99999.0
+        missing_value: -99999
         transform: null
       cclub:
         files:
           # TODO: change
           - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0.csv
-        missing_value: -99999.0
-        transform: null
+        missing_value: -99999
+        transform: cclub_to_cf
 
 categories:
   all: ((channel_id >= -1))

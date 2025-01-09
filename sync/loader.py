@@ -159,7 +159,7 @@ class DataLoader(object):
             return df
 
         # get the transformation function
-        transform_func = getattr(transformations, f"transform_{transform_name}", None)
+        transform_func = getattr(transformations, transform_name, None)
         if not callable(transform_func):
             raise RuntimeError(f"transformation '{transform_name}' not found or not callable")
 

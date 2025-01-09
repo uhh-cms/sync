@@ -17,3 +17,13 @@ def example(dataset: str, group: str, file_key: int | str, df: pd.DataFrame) -> 
     # df.rename(columns={"old": "new"}, inplace=True)
 
     return df
+
+
+def cclub_to_cf(dataset: str, group: str, file_key: int | str, df: pd.DataFrame) -> pd.DataFrame:
+    # re-map channel_ids
+    cclub_channels = {"mutau": 0, "etau": 1, "tautau": 2, "mumu": 3, "ee": 4, "emu": 5}
+    cf_channels = {"etau": 0, "mutau": 1, "tautau": 2, "ee": 3, "mumu": 4, "emu": 5}
+    club_to_cf_map = {cclub_channels[k]: cf_channels[k] for k in cclub_channels.keys()}
+    df["channel_id"] = df["channel_id"].map(club_to_cf_map)
+
+    return df
