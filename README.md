@@ -30,7 +30,7 @@ The first time you start the tool, it will copy or download the synchronization 
 
 As an example, you can show the event yields per category (as defined in the config) and participating groups in a certain dataset as demonstrated below.
 
-```shell
+```text
 > sync
 
 interactive sync tool
