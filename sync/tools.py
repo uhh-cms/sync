@@ -496,6 +496,9 @@ class Tools(object):
                 df = self.loader(dataset, _group)[["event", variable]].sort_values(by=["event"])
                 variable_data[_group] = df[variable].values.astype(float)
 
+            # check if the variable is categorical
+            categorical_values = self.config["categorical_values"].get(variable, None)
+
             # draw the comparison
             path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")
             # show it when possible
@@ -507,6 +510,7 @@ class Tools(object):
                 bins=bins,
                 path=path,
                 normalize=normalize,
+                categorical_values=categorical_values,
                 missing_values={
                     g: self._get_missing_value(dataset, g)
                     for g in {ref_group, *_groups}
@@ -589,6 +593,7 @@ def draw_hist_with_ratio(
     bins: int | list[float],
     path: str,
     normalize: bool,
+    categorical_values: dict[int, str] | None,
     missing_values: dict[str, float],
 ) -> None:
     import mplhep as hep  # type: ignore[import-untyped]
@@ -597,6 +602,13 @@ def draw_hist_with_ratio(
     plt.style.use(hep.style.CMS)
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
+    # categorical axis
+    x_range = None
+    if categorical_values is not None:
+        bins = len(categorical_values)
+        vals = list(categorical_values.keys())
+        x_range = (min(vals) - 0.5, max(vals) + 0.5)
+
     fig, ax = plt.subplots(2, 1, gridspec_kw=dict(height_ratios=[3, 1], hspace=0))
 
     # plot reference group
@@ -604,6 +616,7 @@ def draw_hist_with_ratio(
     ref_count, ref_edges, *_ = ax[0].hist(
         ref_data[ref_data != missing_values[ref_group]],
         bins=bins,
+        range=x_range,
         label=ref_group,
         histtype="step",
         color=colors[0],
@@ -654,6 +667,11 @@ def draw_hist_with_ratio(
     ax[1].set_ylabel(f"1 / {ref_group}", loc="center")
     ax[1].yaxis.set_label_coords(y_label_x_offset, 0.5)
     ax[1].grid(axis="y", linestyle="-", linewidth=1)
+    # set tick labels when axis is categorical
+    if categorical_values:
+        ax[0].set_xticks(list(categorical_values.keys()))
+        ax[1].set_xticks(list(categorical_values.keys()))
+        ax[1].set_xticklabels(list(categorical_values.values()))
 
     fig.savefig(path, dpi=120, bbox_inches="tight")
 

@@ -5,15 +5,15 @@ datasets:
     groups:
       cf:
         files:
-          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v2.csv
+          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v3.csv
         missing_value: -99999
         transform: null
       cclub:
         files:
           # TODO: change
-          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0.csv
+          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v2.csv
         missing_value: -99999
-        transform: cclub_to_cf
+        # transform: cclub_to_cf
 
 categories:
   all: ((channel_id >= -1))
@@ -72,3 +72,7 @@ variables:
   - fatjet2_eta
   - fatjet2_phi
   - fatjet2_mass
+
+categorical_values:
+  channel_id: {1: "etau", 2: "mutau", 3: "tautau", 4: "ee", 5: "mumu", 6: "emu"}
+  os: {0: "SS", 1: "OS"}
