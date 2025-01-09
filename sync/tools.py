@@ -72,6 +72,7 @@ class Tools(object):
 
     def _print_table(self, *args, **kwargs) -> None:
         kwargs.setdefault("tablefmt", self.args.table_format)
+        kwargs.setdefault("intfmt", "_")
         print(tabulate.tabulate(*args, **kwargs))
 
     def _print_header(self, level: int, msg: str) -> None:
