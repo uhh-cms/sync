@@ -26,7 +26,7 @@ class Config(DotDict):
         with open(path, "rb") as f:
             return cls(**yaml.safe_load(f))  # type: ignore[return-value]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         # dataset names and group names should not contain spaces
@@ -37,11 +37,14 @@ class Config(DotDict):
             if " " in group:
                 raise ValueError(f"groups should not contain spaces: '{group}'")
 
+        # cached variables
+        self._variables_dict: dict[str, dict] = {}
+
     def get_globals(self) -> list[str]:
         return [
             *self.get_datasets(),
             *self.get_groups(),
-            *self.get_variables(),
+            *self.get_variables().keys(),
         ]
 
     def get_datasets(self, group: str | None = None) -> list[str]:
@@ -114,13 +117,31 @@ class Config(DotDict):
         data = self["datasets"][dataset]["groups"][group]
         return data.get("transform") if isinstance(data, dict) else None
 
-    def get_variables(self) -> list[str]:
-        return self["variables"]
+    def get_variables(self) -> dict[str, dict]:
+        if not self._variables_dict:
+            variables = self["variables"]
+            for i, v in enumerate(variables):
+                # convert to dict with fields 'name', 'type', 'unit', 'labels'
+                if isinstance(v, str):
+                    v = {"name": v}
+                # insert defaults
+                v = {
+                    "type": "float",
+                    "unit": None,
+                    "labels": None,
+                    **v,
+                }
+                # replace type fiel with actual type
+                v["type"] = {"float": float, "int": int, "bool": bool}[v["type"]]
+                variables[i] = v
+            self._variables_dict = {v["name"]: v for v in variables}
+
+        return self._variables_dict
 
     def select_variables(self, variable: str | list[str] | None = None) -> list[str]:
         all_variables = self.get_variables()
         if variable is None:
-            return all_variables
+            return list(all_variables)
 
         selected_variables: list[str] = []
         for pattern in (variable if isinstance(variable, list) else [variable]):

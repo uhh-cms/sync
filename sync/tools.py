@@ -73,6 +73,7 @@ class Tools(object):
     def _print_table(self, *args, **kwargs) -> None:
         kwargs.setdefault("tablefmt", self.args.table_format)
         kwargs.setdefault("intfmt", "_")
+        kwargs.setdefault("floatfmt", ".6f")
         print(tabulate.tabulate(*args, **kwargs))
 
     def _print_header(self, level: int, msg: str) -> None:
@@ -88,6 +89,17 @@ class Tools(object):
     def _get_missing_value(self, dataset: str, group: str) -> float:
         missing = self.config.get_missing_value(dataset, group)
         return missing if missing is not None else self.missing_value
+
+    def _inject_minimal_variables(
+        self,
+        variables: list[str],
+        minimal: tuple[str, ...] = ("event", "run", "lumi"),
+    ) -> None:
+        # always add event, run and lumi at the beginning
+        for v in minimal[::-1]:
+            if v in variables:
+                variables.remove(v)
+            variables.insert(0, v)
 
     @expose
     def print_config(self) -> None:
@@ -197,6 +209,10 @@ class Tools(object):
 
         # select variables
         _variables = self.config.select_variables(variables)
+        self._inject_minimal_variables(_variables)
+
+        # helper to get the variable type
+        vtype = lambda v: self.config.get_variables()[v]["type"]
 
         # get data frames
         df1 = self.loader(dataset, group1)
@@ -231,9 +247,9 @@ class Tools(object):
                         f"event {event} contained {len(idxs)} times in dataset {dataset} of group"
                         f" {group1}",
                     )
-                row.extend(df[idxs][v].values[0] for v in _variables)
+                row.extend(vtype(v)(df[idxs][v].values[0]) for v in _variables)
 
-                self._print_table([row], headers=headers, floatfmt=".4f")
+                self._print_table([row], headers=headers)
 
                 if interactive:
                     print("")
@@ -269,7 +285,7 @@ class Tools(object):
     def check_common_events(
         self,
         dataset: str,
-        groups: str | None = None,
+        groups: str | list[str] | None = None,
         variables: str | None = None,
         interactive: bool = True,
     ) -> None:
@@ -287,6 +303,10 @@ class Tools(object):
             else self.config.select_groups(groups)
         )
         _variables = self.config.select_variables(variables)
+        self._inject_minimal_variables(_variables)
+
+        # helper to get the variable type
+        vtype = lambda v: self.config.get_variables()[v]["type"]
 
         self._print_header(1, f"Common events for dataset {dataset} between {', '.join(_groups)}")
 
@@ -301,7 +321,7 @@ class Tools(object):
 
         # traverse common events
         for i, event in enumerate(common):
-            headers = [f"# {event}"] + _variables
+            headers = [] + _variables
             table = []
 
             selection = f"(event == {event})"
@@ -313,10 +333,11 @@ class Tools(object):
                         f"event {event} contained {len(idxs)} times in dataset {dataset} of group "
                         f"{group}",
                     )
-                row = [group] + [df[idxs][v].values[0] for v in _variables]
+
+                row = [group] + [vtype(v)(df[idxs][v].values[0]) for v in _variables]
                 table.append(row)
 
-            self._print_table(table, headers=headers, floatfmt=".4f")
+            self._print_table(table, headers=headers)
 
             if i < len(common) - 1:
                 print("")
@@ -343,6 +364,10 @@ class Tools(object):
         # select groups and variables
         _groups = self.config.get_groups(dataset)
         _variables = self.config.select_variables(variables)
+        self._inject_minimal_variables(_variables)
+
+        # helper to get the variable type
+        vtype = lambda v: self.config.get_variables()[v]["type"]
 
         # default events
         if not event:
@@ -372,13 +397,9 @@ class Tools(object):
                             f"event {event} contained {n} times in dataset {dataset} of group "
                             f"{group}",
                         )
-                    for v in _variables:
-                        val = df[idxs][v].values[0]
-                        if isinstance(val, int) or val == -1:
-                            val = str(int(val))  # numpy-safe conversion
-                        row.append(val)
+                    row.extend([vtype(v)(df[idxs][v].values[0]) for v in _variables])
 
-            self._print_table(table, headers=["group"] + _variables, floatfmt=".4f")
+            self._print_table(table, headers=["group"] + _variables)
 
         # loop over events
         for i, e in enumerate(_events):
@@ -457,7 +478,7 @@ class Tools(object):
                 common_events[variables[1]][i],
                 common_events["difference"][i],
             ])
-        self._print_table(table, headers=headers, floatfmt=".4f")
+        self._print_table(table, headers=headers)
 
     @expose
     def draw_variable(
@@ -498,7 +519,7 @@ class Tools(object):
                 variable_data[_group] = df[variable].values.astype(float)
 
             # check if the variable is categorical
-            categorical_values = self.config["categorical_values"].get(variable, None)
+            categorical_values = self.config.get_variables()[variable].get("labels", None)
 
             # draw the comparison
             path = os.path.join(self.args.plot_dir, f"ratio__{dataset}__{variable}.png")

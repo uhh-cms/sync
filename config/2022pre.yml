@@ -32,33 +32,47 @@ categories:
 
 variables:
   # Event
-  - event
-  - run
-  - lumi
-  - channel_id
-  - os
-  - deterministic_seed
+  - name: event
+    type: int
+  - name: run
+    type: int
+  - name: lumi
+    type: int
+  - name: channel_id
+    type: int
+    labels: {1: "etau", 2: "mutau", 3: "tautau", 4: "ee", 5: "mumu", 6: "emu"}
+  - name: os
+    type: int
+    labels: {0: "SS", 1: "OS"}
+  - name: deterministic_seed
+    type: int
   # Jets
   - jet1_pt
   - jet1_eta
   - jet1_phi
   - jet1_mass
-  - jet1_deterministic_seed
+  - name: jet1_deterministic_seed
+    type: int
   - jet2_pt
   - jet2_eta
   - jet2_phi
   - jet2_mass
-  - jet2_deterministic_seed
+  - name: jet2_deterministic_seed
+    type: int
   # Lepton
   - lep1_pt
   - lep1_eta
   - lep1_phi
-  - lep1_charge
+  - name: lep1_charge
+    type: int
+    labels: {-1: "-1", 0: "0", 1: "1"}
   - lep1_deeptauvsjet
   - lep2_pt
   - lep2_eta
   - lep2_phi
-  - lep2_charge
+  - name: lep2_charge
+    type: int
+    labels: {-1: "-1", 0: "0", 1: "1"}
   - lep2_deeptauvsjet
   # MET
   - met_pt
@@ -72,7 +86,3 @@ variables:
   - fatjet2_eta
   - fatjet2_phi
   - fatjet2_mass
-
-categorical_values:
-  channel_id: {1: "etau", 2: "mutau", 3: "tautau", 4: "ee", 5: "mumu", 6: "emu"}
-  os: {0: "SS", 1: "OS"}
