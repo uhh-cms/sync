@@ -627,6 +627,10 @@ def draw_hist_with_ratio(
     ref_centers = (ref_edges[:-1] + ref_edges[1:]) / 2
     ax[1].hlines(1.0, ref_edges[0], ref_edges[-1], linestyle="-", color=colors[0])
 
+    if normalize:
+        # get raw counts for ratio calculation
+        ref_count, _ = np.histogram(ref_data, bins=bins)
+
     # plot rest of the groups
     for group, color in zip(data.keys(), colors[1:]):
         count, *_ = ax[0].hist(
@@ -639,8 +643,10 @@ def draw_hist_with_ratio(
             linewidth=2,
         )
         # ratio plot relative to main group
+        if normalize:
+            count, _ = np.histogram(data[group], bins=ref_edges)
         ratio = count / ref_count
-        ratio_err = ratio * (ref_count**-1 + count**-1)**0.5
+        ratio_err = ratio * (1 / ref_count + 1 / count)**0.5
         ax[1].errorbar(
             ref_centers,
             ratio,
