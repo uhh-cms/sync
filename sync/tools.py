@@ -648,9 +648,9 @@ def draw_hist_with_ratio(
     ref_centers = (ref_edges[:-1] + ref_edges[1:]) / 2
     ax[1].hlines(1.0, ref_edges[0], ref_edges[-1], linestyle="-", color=colors[0])
 
+    # get raw counts for ratio calculation when normalizing
     if normalize:
-        # get raw counts for ratio calculation
-        ref_count, _ = np.histogram(ref_data, bins=bins)
+        ref_count, _ = np.histogram(ref_data[ref_data != missing_values[ref_group]], bins=bins)
 
     # plot rest of the groups
     for group, color in zip(data.keys(), colors[1:]):
