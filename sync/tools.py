@@ -70,10 +70,33 @@ class Tools(object):
         # convert to dict
         return dict(methods)
 
+    def _transpose(self, columns: list[float ,str], header: list[str]) -> tuple[list[str], list[list[str, float]]]:
+        # unpackt to columns, first column is the header
+        all_columns = [header] + columns
+        num_columns = len(all_columns)
+        num_rows = len(all_columns[0])
+
+        # transpose the columns
+        rows = []
+        for row_ind in range(num_rows):
+            row = []
+            for column_ind in range(num_columns):
+                row.append(all_columns[column_ind][row_ind])
+            rows.append(row)
+        header = rows.pop(0)
+        return header, rows
+
     def _print_table(self, *args, **kwargs) -> None:
         kwargs.setdefault("tablefmt", self.args.table_format)
         kwargs.setdefault("intfmt", "_")
         kwargs.setdefault("floatfmt", ".6f")
+
+        if kwargs.pop("transpose", False):
+            header, rows = self._transpose(columns=args[0], header=kwargs.get("headers"))
+            # update old header and rows
+            args = (rows,)
+            kwargs["headers"] = header
+
         print(tabulate.tabulate(*args, **kwargs))
 
     def _print_header(self, level: int, msg: str) -> None:
@@ -124,14 +147,14 @@ class Tools(object):
             print(f"    - {name}")
 
     @expose
-    def show_yields(self, dataset: str | None = None) -> None:
+    def show_yields(self, dataset: str | None = None, *, transpose: bool = False) -> None:
         """
         Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
         evaluated sequentially.
         """
         datasets = self.config.select_datasets(dataset)
 
-        def show(dataset: str) -> None:
+        def show(dataset: str, *, transpose=transpose) -> None:
             self._print_header(1, f"Yields for dataset {dataset}")
             groups = self.config.get_groups(dataset)
             headers = ["category / group"] + groups
@@ -152,14 +175,14 @@ class Tools(object):
                         )
                         raise
                 table.append(line)
-            self._print_table(table, headers=headers)
+            self._print_table(table, headers=headers, transpose=transpose)
 
         for dataset in datasets:
             show(dataset)
             print("")
 
     @expose
-    def compare_yields(self, dataset: str, group1: str, group2: str) -> None:
+    def compare_yields(self, dataset: str, group1: str, group2: str, *, transpose: bool =False) -> None:
         """
         Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
         all known categories.
@@ -188,7 +211,7 @@ class Tools(object):
 
             table.append((cat, len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
 
-        self._print_table(table, headers=headers)
+        self._print_table(table, headers=headers, transpose=transpose)
 
     @expose
     def check_missing_events(
@@ -198,6 +221,8 @@ class Tools(object):
         group2: str,
         variables: str | None = None,
         interactive: bool = True,
+        *,
+        transpose: bool =False,
     ) -> None:
         """
         Traverses missing events between *group1* and *group2* in a specific *dataset* and prints a
@@ -249,7 +274,7 @@ class Tools(object):
                     )
                 row.extend(vtype(v)(df[idxs][v].values[0]) for v in _variables)
 
-                self._print_table([row], headers=headers)
+                self._print_table([row], headers=headers, transpose=transpose)
 
                 if interactive:
                     print("")
@@ -288,6 +313,8 @@ class Tools(object):
         groups: str | list[str] | None = None,
         variables: str | None = None,
         interactive: bool = True,
+        *,
+        transpose: bool = False,
     ) -> None:
         """
         Traverses events in a *dataset* that are common to all *groups* and prints a table with
@@ -337,7 +364,7 @@ class Tools(object):
                 row = [group] + [vtype(v)(df[idxs][v].values[0]) for v in _variables]
                 table.append(row)
 
-            self._print_table(table, headers=headers)
+            self._print_table(table, headers=headers, transpose=transpose)
 
             if i < len(common) - 1:
                 print("")
@@ -354,6 +381,8 @@ class Tools(object):
         event: int | None = None,
         variables: str | None = None,
         interactive: bool = True,
+        *,
+        transpose: bool = False,
     ) -> None:
         """
         Compares *variables* of an *event* given by its id in a specific *dataset*. When *variables*
@@ -399,7 +428,7 @@ class Tools(object):
                         )
                     row.extend([vtype(v)(df[idxs][v].values[0]) for v in _variables])
 
-            self._print_table(table, headers=["group"] + _variables)
+            self._print_table(table, headers=["group"] + _variables, transpose=transpose)
 
         # loop over events
         for i, e in enumerate(_events):
@@ -423,6 +452,8 @@ class Tools(object):
         group1: str,
         group2: str,
         epsilon: float = 1e-5,
+        *,
+        transpose: bool = False,
     ) -> None:
         """
         Compares a *variable* in a specific *dataset* between *group1* and *group2* and prints a
@@ -478,7 +509,7 @@ class Tools(object):
                 common_events[variables[1]][i],
                 common_events["difference"][i],
             ])
-        self._print_table(table, headers=headers)
+        self._print_table(table, headers=headers, transpose=transpose)
 
     @expose
     def draw_variable(

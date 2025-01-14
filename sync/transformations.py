@@ -26,4 +26,9 @@ def cclub_to_cf(dataset: str, group: str, file_key: int | str, df: pd.DataFrame)
     club_to_cf_map = {cclub_channels[k]: cf_channels[k] for k in cclub_channels.keys()}
     df["channel_id"] = df["channel_id"].map(club_to_cf_map)
 
+    # remap missing values
+    cf_missing_value = -99999
+    cclub_missing_value = -999
+    df.replace(cclub_missing_value, cf_missing_value, inplace=True)
     return df
+
