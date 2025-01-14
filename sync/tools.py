@@ -115,8 +115,8 @@ class Tools(object):
 
         # categories
         print("\ncategories:")
-        for name, expr in self.config.get_categories().items():
-            print(f"    - {name}: {expr}")
+        for cat in self.config.get_categories().values():
+            print(f"    - {cat['name']}: {cat['expression']}")
 
         # variables
         print("\nvariables:")
@@ -136,18 +136,18 @@ class Tools(object):
             groups = self.config.get_groups(dataset)
             headers = ["category / group"] + groups
             table = []
-            for cat, cat_expr in self.config.get_categories().items():
-                line = [cat]
+            for cat in self.config.get_categories().values():
+                line = [cat["label"]]
                 for group in groups:
                     df = self.loader(dataset, group)
                     try:
-                        line.append(sum(df.eval(cat_expr)))
+                        line.append(sum(df.eval(cat["expression"])))
                     except ImportError:
                         raise
                     except Exception as e:
                         e.args = (
                             f"evaluation failed for group {group}, dataset {dataset}, category "
-                            f"{cat}: {e}",
+                            f"{cat['name']}: {e}",
                             *e.args[1:],
                         )
                         raise
@@ -178,15 +178,15 @@ class Tools(object):
 
         df1 = self.loader(dataset, group1)
         df2 = self.loader(dataset, group2)
-        for cat, cat_expr in self.config.get_categories().items():
-            _df1 = df1[df1.eval(cat_expr)]
-            _df2 = df2[df2.eval(cat_expr)]
+        for cat in self.config.get_categories().values():
+            _df1 = df1[df1.eval(cat["expression"])]
+            _df2 = df2[df2.eval(cat["expression"])]
 
             # get sets of the event id for simple comparison
             s1 = set(_df1["event"].values)
             s2 = set(_df2["event"].values)
 
-            table.append((cat, len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
+            table.append((cat["label"], len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
 
         self._print_table(table, headers=headers)
 
@@ -422,21 +422,35 @@ class Tools(object):
         variable: str,
         group1: str,
         group2: str,
+        category: str | None = None,
+        n_events: int = 10,
         epsilon: float = 1e-5,
     ) -> None:
         """
         Compares a *variable* in a specific *dataset* between *group1* and *group2* and prints a
         table showing variable values in differing events, i.e., in events where the relative
-        difference exceeds *epsilon*.
+        difference exceeds *epsilon*. When *category* is given, only events from that category are
+        compared. The number of differing events is limited by *n_events*. All events are shown when
+        it is set to a non-positive value.
         """
-        self._print_header(
-            1,
-            f"Compare variable {variable} in dataset {dataset} between {group1} and {group2}",
-        )
+        msg = f"Compare variable {variable} in dataset {dataset} between {group1} and {group2}"
+        if category is not None:
+            msg += f" in category {category}"
+        self._print_header(1, msg)
 
         # load data into pandas dataframes
-        df1 = self.loader(dataset, group1)[["event", "run", "lumi", variable]]
-        df2 = self.loader(dataset, group2)[["event", "run", "lumi", variable]]
+        df1 = self.loader(dataset, group1)
+        df2 = self.loader(dataset, group2)
+
+        # apply category filter
+        if category is not None:
+            expr = self.config.get_categories()[category]["expression"]
+            df1 = df1[df1.eval(expr)]
+            df2 = df2[df2.eval(expr)]
+
+        # reduce variables
+        df1 = df1[["event", "run", "lumi", variable]]
+        df2 = df2[["event", "run", "lumi", variable]]
 
         # get common events in both pandas dataframes
         suffixes = ["_x", "_y"]
@@ -469,15 +483,21 @@ class Tools(object):
 
         headers = ["event", group1, group2, f"{group1} - {group2}"]
         table = []
+        vtype = self.config.get_variables()[variable]["type"]
         for i, diverging in enumerate(idxs):
             if not diverging:
                 continue
             table.append([
-                common_events["event"][i],
-                common_events[variables[0]][i],
-                common_events[variables[1]][i],
-                common_events["difference"][i],
+                int(common_events["event"][i]),
+                vtype(common_events[variables[0]][i]),
+                vtype(common_events[variables[1]][i]),
+                vtype(common_events["difference"][i]),
             ])
+            if n_events > 0 and len(table) >= n_events:
+                break
+        print("")
+        if n_events > 0:
+            print(f"showing first {n_events} of {len(idxs)} differing events")
         self._print_table(table, headers=headers)
 
     @expose
