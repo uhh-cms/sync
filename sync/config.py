@@ -37,7 +37,8 @@ class Config(DotDict):
             if " " in group:
                 raise ValueError(f"groups should not contain spaces: '{group}'")
 
-        # cached variables
+        # cached variables and categories
+        self._categories_dict: dict[str, dict] = {}
         self._variables_dict: dict[str, dict] = {}
 
     def get_globals(self) -> list[str]:
@@ -119,8 +120,7 @@ class Config(DotDict):
 
     def get_variables(self) -> dict[str, dict]:
         if not self._variables_dict:
-            variables = self["variables"]
-            for i, v in enumerate(variables):
+            for i, v in enumerate(self["variables"]):
                 # convert to dict with fields 'name', 'type', 'unit', 'labels'
                 if isinstance(v, str):
                     v = {"name": v}
@@ -133,9 +133,7 @@ class Config(DotDict):
                 }
                 # replace type fiel with actual type
                 v["type"] = {"float": float, "int": int, "bool": bool}[v["type"]]
-                variables[i] = v
-            self._variables_dict = {v["name"]: v for v in variables}
-
+                self._variables_dict[v["name"]] = v
         return self._variables_dict
 
     def select_variables(self, variable: str | list[str] | None = None) -> list[str]:
@@ -152,8 +150,16 @@ class Config(DotDict):
         self.raise_no_match(selected_variables, variable, "variables")
         return selected_variables
 
-    def get_categories(self) -> dict[str, str]:
-        return self["categories"]
+    def get_categories(self) -> dict[str, dict]:
+        if not self._categories_dict:
+            for i, c in enumerate(self["categories"]):
+                # insert defaults
+                c = {
+                    "label": c["name"],
+                    **c,
+                }
+                self._categories_dict[c["name"]] = c
+        return self._categories_dict
 
     def _dataset_group_valid(self, dataset: str, group: str) -> bool:
         return dataset in self["datasets"] and group in self["datasets"][dataset]["groups"]
