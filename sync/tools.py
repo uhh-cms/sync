@@ -25,7 +25,7 @@ import tabulate  # type: ignore[import-untyped]
 from sync.config import Config
 from sync.loader import DataLoader
 from sync.utils import colored
-from sync._types import Callable
+from sync._types import Callable, Any
 
 
 _expose_counter = 0
@@ -70,20 +70,27 @@ class Tools(object):
         # convert to dict
         return dict(methods)
 
-    def _transpose(self, columns: list[float ,str], header: list[str]) -> tuple[list[str], list[list[str, float]]]:
-        # unpackt to columns, first column is the header
-        all_columns = [header] + columns
-        num_columns = len(all_columns)
-        num_rows = len(all_columns[0])
+    def _transpose(
+        self,
+        rows: list[Any],
+        header: list[str] | None = None,
+    ) -> tuple[list[str], list[list[Any]]]:
+        all_rows = ([header] if header else []) + rows
+
+        # dimensions of the transposed table
+        num_columns = len(all_rows)
+        num_rows = len(all_rows[0])
 
         # transpose the columns
-        rows = []
+        new_rows = []
         for row_ind in range(num_rows):
             row = []
             for column_ind in range(num_columns):
-                row.append(all_columns[column_ind][row_ind])
-            rows.append(row)
-        header = rows.pop(0)
+                row.append(all_rows[column_ind][row_ind])
+            new_rows.append(row)
+
+        header = new_rows.pop(0)
+
         return header, rows
 
     def _print_table(self, *args, **kwargs) -> None:
@@ -92,7 +99,7 @@ class Tools(object):
         kwargs.setdefault("floatfmt", ".6f")
 
         if kwargs.pop("transpose", False):
-            header, rows = self._transpose(columns=args[0], header=kwargs.get("headers"))
+            header, rows = self._transpose(args[0], header=kwargs.get("headers"))
             # update old header and rows
             args = (rows,)
             kwargs["headers"] = header
@@ -147,14 +154,14 @@ class Tools(object):
             print(f"    - {name}")
 
     @expose
-    def show_yields(self, dataset: str | None = None, *, transpose: bool = False) -> None:
+    def show_yields(self, dataset: str | None = None, transpose: bool = False) -> None:
         """
         Shows the yields for all groups in a specific *dataset*. When *None*, all datases are
         evaluated sequentially.
         """
         datasets = self.config.select_datasets(dataset)
 
-        def show(dataset: str, *, transpose=transpose) -> None:
+        def show(dataset: str) -> None:
             self._print_header(1, f"Yields for dataset {dataset}")
             groups = self.config.get_groups(dataset)
             headers = ["category / group"] + groups
@@ -182,7 +189,7 @@ class Tools(object):
             print("")
 
     @expose
-    def compare_yields(self, dataset: str, group1: str, group2: str, *, transpose: bool =False) -> None:
+    def compare_yields(self, dataset: str, group1: str, group2: str, *, transpose: bool = False) -> None:
         """
         Compares the yields in a specific *dataset* between *group1* and *group2*, subdivided into
         all known categories.
@@ -221,8 +228,7 @@ class Tools(object):
         group2: str,
         variables: str | None = None,
         interactive: bool = True,
-        *,
-        transpose: bool =False,
+        transpose: bool = False,
     ) -> None:
         """
         Traverses missing events between *group1* and *group2* in a specific *dataset* and prints a
@@ -313,7 +319,6 @@ class Tools(object):
         groups: str | list[str] | None = None,
         variables: str | None = None,
         interactive: bool = True,
-        *,
         transpose: bool = False,
     ) -> None:
         """
@@ -381,7 +386,6 @@ class Tools(object):
         event: int | None = None,
         variables: str | None = None,
         interactive: bool = True,
-        *,
         transpose: bool = False,
     ) -> None:
         """
@@ -454,7 +458,6 @@ class Tools(object):
         category: str | None = None,
         n_events: int = 10,
         epsilon: float = 1e-5,
-        *,
         transpose: bool = False,
     ) -> None:
         """
@@ -530,7 +533,6 @@ class Tools(object):
         if n_events > 0:
             print(f"showing first {n_events} of {len(idxs)} differing events")
         self._print_table(table, headers=headers, transpose=transpose)
-
 
     @expose
     def draw_variable(
