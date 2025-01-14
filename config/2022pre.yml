@@ -11,7 +11,7 @@ datasets:
       cclub:
         files:
           - /afs/cern.ch/work/j/jmotta/public/run3_2022_preEE/ggHH_kl_1_kt_1_c2_0_hbbhtt/cat_synch/Synch4_noHHBTag/data_0.csv
-        missing_value: -99999
+        missing_value: -999
         transform: cclub_to_cf
 
 categories:
