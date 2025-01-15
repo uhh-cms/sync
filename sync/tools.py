@@ -72,26 +72,26 @@ class Tools(object):
 
     def _transpose(
         self,
+        header: list[str],
         rows: list[Any],
-        header: list[str] | None = None,
     ) -> tuple[list[str], list[list[Any]]]:
-        all_rows = ([header] if header else []) + rows
+        all_rows = [header] + rows
 
         # dimensions of the transposed table
-        num_columns = len(all_rows)
+        num_cols = len(all_rows)
         num_rows = len(all_rows[0])
 
         # transpose the columns
         new_rows = []
-        for row_ind in range(num_rows):
+        for row_idx in range(num_rows):
             row = []
-            for column_ind in range(num_columns):
-                row.append(all_rows[column_ind][row_ind])
+            for col_idx in range(num_cols):
+                row.append(all_rows[col_idx][row_idx])
             new_rows.append(row)
 
         header = new_rows.pop(0)
 
-        return header, rows
+        return header, new_rows
 
     def _print_table(self, *args, **kwargs) -> None:
         kwargs.setdefault("tablefmt", self.args.table_format)
@@ -99,7 +99,10 @@ class Tools(object):
         kwargs.setdefault("floatfmt", ".6f")
 
         if kwargs.pop("transpose", False):
-            header, rows = self._transpose(args[0], header=kwargs.get("headers"))
+            header = kwargs.get("headers")
+            if not header:
+                raise RuntimeError("cannot transpose table without headers")
+            header, rows = self._transpose(header, args[0])
             # update old header and rows
             args = (rows,)
             kwargs["headers"] = header
