@@ -531,7 +531,7 @@ class Tools(object):
                 break
         print("")
         if n_events > 0:
-            print(f"showing first {n_events} of {len(idxs)} differing events")
+            print(f"showing first {n_events} of {len(idxs)} events with differences in variable")
         self._print_table(table, headers=headers, transpose=transpose)
 
     @expose
@@ -540,6 +540,7 @@ class Tools(object):
         dataset: str | None = None,
         variable: str | None = None,
         ref_group: str | None = None,
+        category: str | None = None,
         bins: int = 20,
         normalize: bool = False,
     ) -> None:
@@ -547,7 +548,8 @@ class Tools(object):
         Creates a histogram with number of *bins* also including a ratio relative to *ref_group*.
         The plot is created specific for a *dataset* and *variable* and saves it in the plot
         directory. When *dataset* is *None*, all available datasets are used. When *variables* is
-        *None*, the variables defined in the configuration are used.
+        *None*, the variables defined in the configuration are used. When *category* is given, only
+        events from that category are compared.
         """
         _datasets = self.config.select_datasets(dataset)
         _variables = self.config.select_variables(variable)
@@ -567,9 +569,15 @@ class Tools(object):
             """
             variable_data = {}
 
+            # prepare category expression
+            cat = None if category is None else self.config.get_categories()[category]
+
             # get data for all groups
             for _group in _groups:
-                df = self.loader(dataset, _group)[["event", variable]].sort_values(by=["event"])
+                df = self.loader(dataset, _group)
+                if cat:
+                    df = df[df.eval(cat["expression"])]
+                df = df[["event", variable]].sort_values(by=["event"])
                 variable_data[_group] = df[variable].values.astype(float)
 
             # check if the variable is categorical
@@ -591,6 +599,7 @@ class Tools(object):
                     g: self._get_missing_value(dataset, g)
                     for g in {ref_group, *_groups}
                 },
+                category=cat["label"] if cat else None,
             )
             print(f"created plot at {path}")
             self._show_plot(path)
@@ -671,6 +680,7 @@ def draw_hist_with_ratio(
     normalize: bool,
     categorical_values: dict[int, str] | None,
     missing_values: dict[str, float],
+    category: str | None = None,
 ) -> None:
     import mplhep as hep  # type: ignore[import-untyped]
     import matplotlib.pyplot as plt
@@ -754,6 +764,10 @@ def draw_hist_with_ratio(
         ax[0].set_xticks(list(categorical_values.keys()))
         ax[1].set_xticks(list(categorical_values.keys()))
         ax[1].set_xticklabels(list(categorical_values.values()))
+
+    # category label
+    if category:
+        ax[0].annotate(category, xy=(0.5, 0.95), xycoords="axes fraction", ha="center", va="top")
 
     fig.savefig(path, dpi=120, bbox_inches="tight")
 

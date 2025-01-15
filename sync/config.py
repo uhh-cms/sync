@@ -46,6 +46,7 @@ class Config(DotDict):
             *self.get_datasets(),
             *self.get_groups(),
             *self.get_variables().keys(),
+            *self.get_categories().keys(),
         ]
 
     def get_datasets(self, group: str | None = None) -> list[str]:

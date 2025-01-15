@@ -17,43 +17,43 @@ datasets:
 categories:
   - name: all
     expression: ((channel_id >= -1))
-    label: All
+    label: All events
   - name: etau_os
     expression: ((channel_id == 1) & (os == 1))
-    label: etau OS
+    label: $e\tau_h$ (OS)
   - name: etau_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: etau SS
+    label: $e\tau_h$ (SS)
   - name: mutau_os
     expression: ((channel_id == 1) & (os == 1))
-    label: mutau OS
+    label: $\mu\tau_h$ (OS)
   - name: mutau_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: mutau SS
+    label: $\mu\tau_h$ (SS)
   - name: tautau_os
     expression: ((channel_id == 1) & (os == 1))
-    label: tautau OS
+    label: $\tau_h\tau_h$ (OS)
   - name: tautau_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: tautau SS
+    label: $\tau_h\tau_h$ (SS)
   - name: ee_os
     expression: ((channel_id == 1) & (os == 1))
-    label: ee OS
+    label: $ee$ (OS)
   - name: ee_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: ee SS
+    label: $ee$ (SS)
   - name: mumu_os
     expression: ((channel_id == 1) & (os == 1))
-    label: mumu OS
+    label: $\mu\mu$ (OS)
   - name: mumu_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: mumu SS
+    label: $\mu\mu$ (SS)
   - name: emu_os
     expression: ((channel_id == 1) & (os == 1))
-    label: emu OS
+    label: $e\mu$ (OS)
   - name: emu_ss
     expression: ((channel_id == 1) & (os == 0))
-    label: emu SS
+    label: $e\mu$ (SS)
 
 variables:
   # Event
