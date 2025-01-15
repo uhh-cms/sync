@@ -170,7 +170,7 @@ class Tools(object):
             headers = ["category / group"] + groups
             table = []
             for cat in self.config.get_categories().values():
-                line = [cat["label"]]
+                line = [cat["name"]]
                 for group in groups:
                     df = self.loader(dataset, group)
                     try:
@@ -219,7 +219,7 @@ class Tools(object):
             s1 = set(_df1["event"].values)
             s2 = set(_df2["event"].values)
 
-            table.append((cat["label"], len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
+            table.append((cat["name"], len(s1), len(s2), len(s1 & s2), len(s1 - s2), len(s2 - s1)))
 
         self._print_table(table, headers=headers, transpose=transpose)
 
