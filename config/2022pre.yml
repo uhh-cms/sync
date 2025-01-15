@@ -5,7 +5,7 @@ datasets:
     groups:
       cf:
         files:
-          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v4.csv
+          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v5.csv
         missing_value: -99999
         transform: null
       cclub:
