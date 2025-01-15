@@ -25,34 +25,34 @@ categories:
     expression: ((channel_id == 1) & (os == 0))
     label: $e\tau_h$ (SS)
   - name: mutau_os
-    expression: ((channel_id == 1) & (os == 1))
+    expression: ((channel_id == 2) & (os == 1))
     label: $\mu\tau_h$ (OS)
   - name: mutau_ss
-    expression: ((channel_id == 1) & (os == 0))
+    expression: ((channel_id == 2) & (os == 0))
     label: $\mu\tau_h$ (SS)
   - name: tautau_os
-    expression: ((channel_id == 1) & (os == 1))
+    expression: ((channel_id == 3) & (os == 1))
     label: $\tau_h\tau_h$ (OS)
   - name: tautau_ss
-    expression: ((channel_id == 1) & (os == 0))
+    expression: ((channel_id == 3) & (os == 0))
     label: $\tau_h\tau_h$ (SS)
   - name: ee_os
-    expression: ((channel_id == 1) & (os == 1))
+    expression: ((channel_id == 4) & (os == 1))
     label: $ee$ (OS)
   - name: ee_ss
-    expression: ((channel_id == 1) & (os == 0))
+    expression: ((channel_id == 4) & (os == 0))
     label: $ee$ (SS)
   - name: mumu_os
-    expression: ((channel_id == 1) & (os == 1))
+    expression: ((channel_id == 5) & (os == 1))
     label: $\mu\mu$ (OS)
   - name: mumu_ss
-    expression: ((channel_id == 1) & (os == 0))
+    expression: ((channel_id == 5) & (os == 0))
     label: $\mu\mu$ (SS)
   - name: emu_os
-    expression: ((channel_id == 1) & (os == 1))
+    expression: ((channel_id == 6) & (os == 1))
     label: $e\mu$ (OS)
   - name: emu_ss
-    expression: ((channel_id == 1) & (os == 0))
+    expression: ((channel_id == 6) & (os == 0))
     label: $e\mu$ (SS)
 
 variables:
