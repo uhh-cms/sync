@@ -19,41 +19,57 @@ categories:
     label: All events
     expression: ((channel_id >= -1))
   - name: etau_os
-    label: $e\tau_h$ (OS)
+    label: $e\tau_h$ ((OS))
     expression: ((channel_id == 1) & (os == 1))
   - name: etau_ss
     label: $e\tau_h$ (SS)
     expression: ((channel_id == 1) & (os == 0))
   - name: mutau_os
-    label: $\mu\tau_h$ (OS)
+    label: $\mu\tau_h$ ((OS))
     expression: ((channel_id == 2) & (os == 1))
   - name: mutau_ss
     label: $\mu\tau_h$ (SS)
     expression: ((channel_id == 2) & (os == 0))
   - name: tautau_os
-    label: $\tau_h\tau_h$ (OS)
+    label: $\tau_h\tau_h$ ((OS))
     expression: ((channel_id == 3) & (os == 1))
   - name: tautau_ss
     label: $\tau_h\tau_h$ (SS)
     expression: ((channel_id == 3) & (os == 0))
   - name: ee_os
-    label: $ee$ (OS)
+    label: $ee$ ((OS))
     expression: ((channel_id == 4) & (os == 1))
   - name: ee_ss
     label: $ee$ (SS)
     expression: ((channel_id == 4) & (os == 0))
   - name: mumu_os
-    label: $\mu\mu$ (OS)
+    label: $\mu\mu$ ((OS))
     expression: ((channel_id == 5) & (os == 1))
   - name: mumu_ss
     label: $\mu\mu$ (SS)
     expression: ((channel_id == 5) & (os == 0))
   - name: emu_os
-    label: $e\mu$ (OS)
+    label: $e\mu$ ((OS))
     expression: ((channel_id == 6) & (os == 1))
   - name: emu_ss
     label: $e\mu$ (SS)
     expression: ((channel_id == 6) & (os == 0))
+  - name: res1b
+    label: res1b
+    expression: (kinematic_id == 0)
+  - name: res2b
+    label: res2b
+    expression: (kinematic_id == 1)
+  - name: boosted
+    label: boosted
+    expression: (kinematic_id==2)
+  - name: dy
+    label: DY enriched
+    expression: (particle_enriched_id==0)
+  - name: tt
+    label: $t\bar{t}$ enriched
+    expression: (particle_enriched_id==1)
+
 
 variables:
   # Event
@@ -65,7 +81,12 @@ variables:
     type: int
   - name: channel_id
     type: int
-    labels: {1: "etau", 2: "mutau", 3: "tautau", 4: "ee", 5: "mumu", 6: "emu"}
+  - name: kinematic_id
+    type: int
+    labels: {0: "res1b", 1: "res2b", 2: "boosted"}
+  - name: particle_enriched_id
+    type: int
+    labels: {0: "dy enriched", 1: "$t\bar{t}$ enriched enriched"}
   - name: os
     type: int
     labels: {0: "SS", 1: "OS"}
