@@ -26,4 +26,11 @@ def cclub_to_cf(dataset: str, group: str, file_key: int | str, df: pd.DataFrame)
     club_to_cf_map = {cclub_channels[k]: cf_channels[k] for k in cclub_channels.keys()}
     df["channel_id"] = df["channel_id"].map(club_to_cf_map)
 
+    # rename dnn output
+    df.rename(columns={
+        "dnn_HHbbtt_HH": "dnn_dy",
+        "dnn_HHbbtt_TT": "dnn_hh",
+        "dnn_HHbbtt_DY": "dnn_tt",
+    },
+        inplace=True)
     return df
