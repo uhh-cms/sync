@@ -1,11 +1,18 @@
 datasets:
   hh:
-    lfn: /store/mc/Run3Summer22NanoAODv12/GluGlutoHHto2B2Tau_kl-1p00_kt-1p00_c2-0p00_LHEweights_TuneCP5_13p6TeV_powheg-pythia8/NANOAODSIM/130X_mcRun3_2022_realistic_v5-v2/50000/992697da-4a10-4435-b63a-413f6d33517e.root
+    lfn: /eos/cms/store/group/phys_higgs/HLepRare/skim_2024_v2/Run3_2022/GluGlutoHHto2B2Tau_kl_1p00_kt_1p00_c2_0p00_LHEweights/nano_0.root
     test_events: [224012, 238597, 238638, 239072, 242573]
     groups:
       cf:
-        files:
-          - /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v8.csv
+        files: /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v8.csv
+        missing_value: -99999
+        transform: null
+      cf_res:
+        files: /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v8_resonant.csv
+        missing_value: -99999
+        transform: null
+      cf_hhbtag:
+        files: /afs/cern.ch/work/m/mrieger/public/hbt/run3_sync/sync_hh_ggf_hbb_htt_kl1_kt1_powheg_0_v8_hhbtag.csv
         missing_value: -99999
         transform: null
       cclub:
@@ -63,12 +70,6 @@ categories:
   - name: boosted
     label: boosted
     expression: (kinematic_id==2)
-  - name: dy
-    label: DY enriched
-    expression: (particle_enriched_id==0)
-  - name: tt
-    label: $t\bar{t}$ enriched
-    expression: (particle_enriched_id==1)
 
 
 variables:
@@ -84,9 +85,6 @@ variables:
   - name: kinematic_id
     type: int
     labels: {0: "res1b", 1: "res2b", 2: "boosted"}
-  - name: particle_enriched_id
-    type: int
-    labels: {0: "dy enriched", 1: "$t\bar{t}$ enriched enriched"}
   - name: os
     type: int
     labels: {0: "SS", 1: "OS"}
